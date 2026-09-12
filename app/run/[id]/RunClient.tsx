@@ -81,9 +81,9 @@ export default function RunClient({ skill }: { skill: Skill }) {
     : record?.status === 'done'
       ? { cls: 'done', text: 'Done' }
       : record?.status === 'failed'
-        ? { cls: 'needs', text: `Needs you — ${record.error ?? result?.error}` }
+        ? { cls: 'needs', text: `Needs you · ${record.error ?? result?.error}` }
         : error
-          ? { cls: 'needs', text: `Needs you — ${error}` }
+          ? { cls: 'needs', text: `Needs you · ${error}` }
           : null;
 
   return (
@@ -114,7 +114,7 @@ export default function RunClient({ skill }: { skill: Skill }) {
 
         {record?.debugUrl && (
           <section style={{ margin: '12px 0' }}>
-            <BrowserPane src={record.debugUrl} title="Steel live session" label="live session — steel cloud" />
+            <BrowserPane src={record.debugUrl} title="Steel live session" label="live session · steel cloud" />
             <div className="lp-takeover">
               <a href={record.debugUrl} target="_blank" rel="noreferrer">
                 Take over in a new tab ↗
@@ -134,7 +134,7 @@ export default function RunClient({ skill }: { skill: Skill }) {
             {variableParams.map((step) => (
               <label key={step.param!.name} style={{ display: 'block', marginBottom: 12, fontSize: 14 }}>
                 <span className="lp-faint lp-mono" style={{ display: 'block', fontSize: 11, marginBottom: 5 }}>
-                  {step.param!.name} — {step.text}
+                  {step.param!.name} · {step.text}
                 </span>
                 <input
                   className="lp-field"

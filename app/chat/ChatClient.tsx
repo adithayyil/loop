@@ -46,12 +46,12 @@ function LoopMark({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path
-        d="M12 3.2a8.8 8.8 0 1 1-8.1 5.4"
+        d="M12 12c-1.6-2.9-3.4-4.4-5.2-4.4C4.7 7.6 3 9.6 3 12s1.7 4.4 3.8 4.4c1.8 0 3.6-1.5 5.2-4.4 1.6-2.9 3.4-4.4 5.2-4.4 2.1 0 3.8 2 3.8 4.4s-1.7 4.4-3.8 4.4c-1.8 0-3.6-1.5-5.2-4.4"
         stroke="currentColor"
-        strokeWidth="2.4"
+        strokeWidth="2.1"
         strokeLinecap="round"
+        strokeLinejoin="round"
       />
-      <circle cx="19.4" cy="6.2" r="2.5" fill="currentColor" />
     </svg>
   );
 }
@@ -201,7 +201,7 @@ export default function ChatClient({
         if (!poll) {
           clearInterval(interval);
           intervals.current.delete(assistantId);
-          patch(assistantId, { status: 'failed', error: 'Lost contact with the run — try again.' });
+          patch(assistantId, { status: 'failed', error: 'Lost contact with the run. Try again.' });
           setBusy(false);
           return;
         }
@@ -359,7 +359,7 @@ export default function ChatClient({
           </div>
           <div>
             <div className="lp-brand-name">loop</div>
-            <div className="lp-brand-sub">BROWSER AUTOMATION</div>
+            <div className="lp-brand-sub">browser automation</div>
           </div>
         </div>
 
@@ -406,7 +406,7 @@ export default function ChatClient({
               <div className="lp-hero-mark">
                 <LoopMark size={22} />
               </div>
-              <p className="lp-kicker">loop — cloud browser automation</p>
+              <p className="lp-kicker">loop · cloud browser automation</p>
               <h1 className="lp-hero-title">
                 Show it once.
                 <br />
@@ -476,7 +476,7 @@ export default function ChatClient({
                         {message.kind === 'browser' && message.status === 'running' && recStartedAt != null ? (
                           <span className="lp-timer">{formatClock(now - recStartedAt)}</span>
                         ) : null}
-                        {message.summary ? <span className="lp-summary">— {message.summary}</span> : null}
+                        {message.summary ? <span className="lp-summary">· {message.summary}</span> : null}
                       </div>
 
                       {message.kind === 'browser' && message.status === 'processing' ? (
@@ -526,7 +526,7 @@ export default function ChatClient({
                                   <span className="lp-tl-action">{step.action}</span>
                                   <span className="lp-tl-detail">
                                     {step.detail}
-                                    {step.result ? <span className="lp-tl-result"> — {step.result}</span> : null}
+                                    {step.result ? <span className="lp-tl-result"> · {step.result}</span> : null}
                                   </span>
                                 </div>
                               ))}
@@ -537,7 +537,7 @@ export default function ChatClient({
                             <BrowserPane
                               src={message.debugUrl}
                               title="Live browser"
-                              label="live session — steel cloud"
+                              label="live session · steel cloud"
                               className="lp-browser--flush"
                             />
                           ) : null}
@@ -621,9 +621,9 @@ export default function ChatClient({
           )}
 
           <div className="lp-hint">
-            <span>{mode === 'agent' ? 'ENTER TO RUN · SHIFT+ENTER NEW LINE' : 'YOU DRIVE — WE CAPTURE THE STEPS'}</span>
+            <span>{mode === 'agent' ? 'Enter to run · Shift+Enter new line' : 'You drive · we capture the steps'}</span>
             <span className={compiling || busy ? 'lp-busy' : recording ? 'lp-live' : ''}>
-              {compiling ? 'COMPILING' : busy ? 'RUNNING' : recording ? 'REC' : 'CLOUD BROWSER'}
+              {compiling ? 'compiling' : busy ? 'running' : recording ? 'rec' : 'cloud browser'}
             </span>
           </div>
         </div>

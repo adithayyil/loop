@@ -1,5 +1,5 @@
 /* ============================================================
-   loop — design system v2 ("signal")
+   loop: design system v2 ("signal")
    Warm ink, hairline glass, one signal-lime accent, red reserved
    for recording. Serif italic for moments of voice, mono for
    data, grotesk for the rest.
@@ -58,7 +58,7 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* film grain over everything — cinematic, ties the surfaces together */
+/* film grain over everything: cinematic, ties the surfaces together */
 body::after {
   content: '';
   position: fixed;
@@ -98,10 +98,9 @@ button {
 .lp-kicker {
   margin: 0;
   font-family: var(--lp-font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--lp-text-3);
 }
 
@@ -210,7 +209,7 @@ button {
   border-radius: 8px;
 }
 
-/* status orbit — a thin gradient arc chasing itself while working */
+/* status orbit: a thin gradient arc chasing itself while working */
 
 .lp-orbit {
   width: 13px;
@@ -284,7 +283,7 @@ button {
   overflow: hidden;
 }
 
-/* ambient light — faint lime bloom over the thread, cool wash bottom-right */
+/* ambient light: faint lime bloom over the thread, cool wash bottom-right */
 .lp-app::before {
   content: '';
   position: fixed;
@@ -418,10 +417,9 @@ button {
 
 .lp-section {
   font-family: var(--lp-font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: var(--lp-text-3);
   padding: 16px 10px 6px;
 }
@@ -643,10 +641,9 @@ button {
   min-width: 58px;
   text-align: center;
   font-family: var(--lp-font-mono);
-  font-size: 9.5px;
+  font-size: 10.5px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   color: var(--lp-accent);
   background: var(--lp-accent-dim);
   border: 1px solid rgba(201, 242, 78, 0.22);
@@ -686,7 +683,7 @@ button {
   border-radius: 0 0 var(--lp-r-lg) var(--lp-r-lg);
 }
 
-/* full screen — fixed/stays mounted (no iframe reload), giant shadow dims the app */
+/* full screen: fixed/stays mounted (no iframe reload), giant shadow dims the app */
 .lp-browser--full {
   position: fixed;
   inset: 16px;
@@ -713,9 +710,8 @@ button {
   transform: translateX(-50%);
   z-index: 91;
   font-family: var(--lp-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
   color: var(--lp-text-2);
   background: rgba(14, 14, 18, 0.9);
   border: 1px solid var(--lp-line);
@@ -1049,9 +1045,8 @@ button {
   margin: 22px 0 14px;
   color: var(--lp-text-3);
   font-family: var(--lp-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
 }
 
 .lp-or::before,
@@ -1340,10 +1335,9 @@ button {
   border-radius: 999px;
   padding: 4px 12px;
   font-family: var(--lp-font-mono);
-  font-size: 10.5px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   background: var(--lp-accent-dim);
   border: 1px solid var(--lp-accent-line);
   color: var(--lp-accent);
@@ -1497,9 +1491,8 @@ button {
 }
 
 .lp-pill .lp-pill-mode {
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.02em;
 }
 
 .lp-pill.variable {
@@ -1547,9 +1540,8 @@ button {
 .lp-menu label {
   display: block;
   font-family: var(--lp-font-mono);
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
   color: var(--lp-text-3);
   padding: 6px 8px 0;
 }

@@ -71,7 +71,7 @@ export default function BrowserPane({
           {recording ? (
             <span className="lp-rec-chip">
               <span className="lp-led" />
-              REC
+              rec
             </span>
           ) : (
             <span className="lp-browser-dots">

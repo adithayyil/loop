@@ -24,7 +24,7 @@ export default function LibraryPage() {
           <div className="lp-empty-state">
             <p className="lp-kicker">No loops yet</p>
             <p>
-              Record a task once — replay it forever.
+              Record a task once. Replay it forever.
             </p>
             <Link href="/" className="lp-btn primary">
               Make your first loop →

@@ -9,14 +9,18 @@ non-technical person can review and edit.
 
 Rules:
 - Produce exactly one step per recorded action, in the recorded order, echoing that
-  action's zero-based index as actionIndex. Do not merge or drop actions.
+  action's zero-based index as actionIndex. Do not merge or drop actions. A click
+  that leads to a new page is already captured by the click, so never write a
+  separate "navigate to" step for it.
 - Write steps as imperatives in the user's own words, at most one sentence each.
   Collapse focus clicks, keep the intent. E.g. "Log in to the vendor portal",
   "Filter the list to Unpaid", "Download the first invoice PDF".
 - For every literal value the action introduces (typed text, a username, a filter
   choice), add a "param" guess: mode "variable" if a normal person would plausibly
   change it each run (search terms, dates, filter values, form data that varies),
-  otherwise "fixed". Give the param a short snake_case name and its current value.
+  otherwise "fixed". Name the param after what it means in snake_case (at most three
+  words), for example repository_name or status. Never name it after a file name,
+  URL, or the element text. Always set its current value.
 - If a value looks like a credential or an obviously stable setting, prefer "fixed".
 - Mark sign-in-only steps (entering credentials, clicking Sign in) that exist purely
   to authenticate — not the task itself — with skipIfAuthenticated: true, so a saved

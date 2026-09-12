@@ -52,7 +52,7 @@ test('normalize flushes pending fills before a submit click', () => {
   assert.equal(actions[3].name, 'Sign in');
 });
 
-test('normalize emits a goto when navigation changes', () => {
+test('normalize folds a click-caused navigation into the click', () => {
   const events: RecordedEvent[] = [
     { ts: 1, type: 'navigate', url: 'https://example.com/' },
     { ts: 2, type: 'click', url: 'https://example.com/', css: 'a#go', role: 'link', name: 'Go' },
@@ -63,9 +63,24 @@ test('normalize emits a goto when navigation changes', () => {
 
   assert.deepEqual(
     actions.map((a) => a.kind),
-    ['goto', 'click', 'goto'],
+    ['goto', 'click'],
   );
-  assert.equal(actions[2].url, 'https://example.com/next');
+  assert.equal(actions[1].name, 'Go');
+});
+
+test('normalize emits a goto for a navigation with no preceding action', () => {
+  const events: RecordedEvent[] = [
+    { ts: 1, type: 'navigate', url: 'https://example.com/' },
+    { ts: 2, type: 'navigate', url: 'https://example.com/other' },
+  ];
+
+  const actions = normalize(events);
+
+  assert.deepEqual(
+    actions.map((a) => a.kind),
+    ['goto', 'goto'],
+  );
+  assert.equal(actions[1].url, 'https://example.com/other');
 });
 
 test('normalize drops captcha/challenge interactions', () => {

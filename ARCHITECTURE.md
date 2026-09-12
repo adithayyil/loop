@@ -1,6 +1,6 @@
 # Architecture
 
-**loop** records a browser task once — either by you doing it or by an agent doing it — turns the
+**loop** records a browser task once, either by you doing it or by an agent doing it, turns the
 captured DOM events into an editable, plain-language step list, and replays that list
 deterministically in a fresh cloud browser session.
 
@@ -150,11 +150,11 @@ All route handlers run on the Node runtime (`export const runtime = 'nodejs'`).
 
 `runAgent()` (`lib/agent.ts`) drives the browser from a natural-language goal:
 
-1. **Observe** — `page.locator('body').ariaSnapshot({ mode: 'ai' })` plus URL/title.
-2. **Decide** — a Claude tool call (`tool_choice: any`) picks exactly one action.
-3. **Act** — executed with Playwright, mostly by `getByRole(role, { name })` (fallback
+1. **Observe**: `page.locator('body').ariaSnapshot({ mode: 'ai' })` plus URL/title.
+2. **Decide**: a Claude tool call (`tool_choice: any`) picks exactly one action.
+3. **Act**: executed with Playwright, mostly by `getByRole(role, { name })` (fallback
    label/placeholder/text), so the emitted locators match the replay chain.
-4. **Record** — the same DOM recorder is injected, so agent actions compile through the identical
+4. **Record**: the same DOM recorder is injected, so agent actions compile through the identical
    pipeline.
 
 Tools: `goto`, `click`, `type`, `select`, `press`, `scroll`, `wait`, `done`, `fail`.
@@ -206,7 +206,7 @@ polls `/api/runs/[id]`, embedding the Steel player while `running`.
 
 ## 10. Persistence
 
-SQLite via Node's built-in `node:sqlite` (`lib/db.ts`) — no native build step. Two tables store
+SQLite via Node's built-in `node:sqlite` (`lib/db.ts`), no native build step. Two tables store
 JSON blobs:
 
 ```sql
@@ -239,7 +239,7 @@ at `loop.db` (gitignored).
 The Steel cloud browser cannot reach `localhost`, so recording against a local site requires
 exposing it publicly (a tunnel such as `cloudflared tunnel --url http://localhost:3000`, or a
 deployment) and navigating the in-app browser to that URL. (The self-hosted invoice demo app that
-previously shipped in this repo — `app/demo/vendor/**` — was removed; any public site can be the
+previously shipped in this repo, `app/demo/vendor/**`, was removed; any public site can be the
 target now.)
 
 ---
@@ -277,11 +277,11 @@ gitignored.
 
 ## 15. Known limitations
 
-- **DOM/ARIA-first agent** — canvas/visual-only UIs and image captchas are out of scope (vision
+- **DOM/ARIA-first agent**: canvas/visual-only UIs and image captchas are out of scope (vision
   fallback would use Steel's `sessions.computer` + a VLM).
-- **Main-frame recorder** — iframes, closed shadow DOM, file uploads, and drag-drop are not captured.
-- **Selector fragility** — the locator chain helps, but there is no vision self-healing yet.
-- **First-match downloads** — multi-item iteration ("download *each* PDF") is not implemented.
-- **Schedules are stored, not fired** — only "Run now" executes.
-- **Single-process state** — in-flight captures/runs live in `globalThis`; a restart drops them
+- **Main-frame recorder**: iframes, closed shadow DOM, file uploads, and drag-drop are not captured.
+- **Selector fragility**: the locator chain helps, but there is no vision self-healing yet.
+- **First-match downloads**: multi-item iteration ("download *each* PDF") is not implemented.
+- **Schedules are stored, not fired**: only "Run now" executes.
+- **Single-process state**: in-flight captures/runs live in `globalThis`; a restart drops them
   (persisted recordings/skills survive in SQLite).

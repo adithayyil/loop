@@ -294,7 +294,7 @@ export default function ReviewClient({
               {error && <p className="lp-error">{error}</p>}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18 }}>
                 <button type="button" className="lp-btn primary" onClick={save} disabled={saving}>
-                  {saving ? 'Saving…' : 'Looks good — save it'}
+                  {saving ? 'Saving…' : 'Looks good, save it'}
                 </button>
                 <span className="lp-faint" style={{ fontSize: 12.5 }}>
                   or keep refining above

@@ -72,7 +72,15 @@ export function normalize(events: RecordedEvent[]): Action[] {
     if (event.type === 'navigate') {
       if (event.url && event.url !== 'about:blank' && event.url !== lastNavUrl) {
         flushPending();
-        actions.push({ kind: 'goto', url: event.url });
+        // A navigation right after a click or Enter is that action's outcome, not a
+        // step of its own. Replaying the click/submit already goes there, so emitting
+        // a separate `goto` would duplicate the step.
+        const previous = actions[actions.length - 1];
+        const impliedByPreviousAction =
+          previous?.kind === 'click' || previous?.kind === 'type+enter';
+        if (!impliedByPreviousAction) {
+          actions.push({ kind: 'goto', url: event.url });
+        }
         lastNavUrl = event.url;
       }
       continue;
