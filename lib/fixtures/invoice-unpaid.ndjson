@@ -1,0 +1,9 @@
+{"ts":1,"type":"navigate","url":"https://vendor.example.com/demo/vendor/login","title":"Vendor Portal"}
+{"ts":2,"type":"click","url":"https://vendor.example.com/demo/vendor/login","tag":"input","css":"input#username","role":"textbox","name":"Username","dataTest":"username","id":"username","inputType":"text","checked":false,"cls":""}
+{"ts":3,"type":"change","url":"https://vendor.example.com/demo/vendor/login","tag":"input","css":"input#username","role":"textbox","name":"Username","dataTest":"username","id":"username","inputType":"text","checked":false,"cls":"","value":"vendor"}
+{"ts":4,"type":"change","url":"https://vendor.example.com/demo/vendor/login","tag":"input","css":"input#password","role":"textbox","name":"Password","dataTest":"password","id":"password","inputType":"password","checked":false,"cls":"","value":"hunter2"}
+{"ts":5,"type":"click","url":"https://vendor.example.com/demo/vendor/login","tag":"button","css":"button[data-testid=\"login-button\"]","role":"button","name":"Sign in","dataTest":"login-button","id":null,"inputType":"submit","checked":null,"cls":""}
+{"ts":6,"type":"navigate","url":"https://vendor.example.com/demo/vendor","title":"Invoices"}
+{"ts":7,"type":"click","url":"https://vendor.example.com/demo/vendor","tag":"a","css":"a","role":"link","name":"Unpaid","dataTest":null,"id":null,"inputType":null,"checked":null,"cls":""}
+{"ts":8,"type":"navigate","url":"https://vendor.example.com/demo/vendor?status=unpaid","title":"Invoices"}
+{"ts":9,"type":"click","url":"https://vendor.example.com/demo/vendor?status=unpaid","tag":"a","css":"a[data-testid=\"download-INV-1001\"]","role":"link","name":"Download PDF","dataTest":"download-INV-1001","id":null,"inputType":null,"checked":null,"cls":""}

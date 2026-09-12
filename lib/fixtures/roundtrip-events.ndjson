@@ -1,0 +1,6 @@
+{"ts":1789244417869,"type":"click","url":"https://todomvc.com/examples/react/dist/","css":"input.new-todo","role":"textbox","name":"New Todo Input","cls":"new-todo","inputType":"text","checked":false}
+{"ts":1789244419668,"type":"enter","url":"https://todomvc.com/examples/react/dist/","value":"buy milk","css":"input.new-todo","role":"textbox","name":"New Todo Input","cls":"new-todo","inputType":"text","checked":false}
+{"ts":1789244421325,"type":"enter","url":"https://todomvc.com/examples/react/dist/","value":"pay invoice","css":"input.new-todo","role":"textbox","name":"New Todo Input","cls":"new-todo","inputType":"text","checked":false}
+{"ts":1789244421850,"type":"click","url":"https://todomvc.com/examples/react/dist/","css":"input.toggle","role":"checkbox","name":null,"cls":"toggle","inputType":"checkbox","checked":true}
+{"ts":1789244421859,"type":"change","url":"https://todomvc.com/examples/react/dist/","value":"on","css":"input.toggle","role":"checkbox","name":null,"cls":"toggle","inputType":"checkbox","checked":true}
+{"ts":1789244422644,"type":"click","url":"https://todomvc.com/examples/react/dist/","css":"a","role":"link","name":"Active","cls":"","inputType":null,"checked":null}
