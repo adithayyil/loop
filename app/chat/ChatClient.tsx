@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { AgentRecord } from '@/lib/agent-runs';
+import BrowserPane from '@/app/components/BrowserPane';
 
 interface Step {
   n: number;
@@ -35,34 +36,72 @@ interface SkillSummary {
 }
 
 const SUGGESTIONS = [
-  { label: 'Download the unpaid invoice PDF', detail: 'log in, filter to Unpaid, download', prompt: 'Log in with username "vendor" and password "hunter2", then filter to Unpaid and download the first unpaid invoice PDF' },
-  { label: 'Download all unpaid invoices', detail: 'one file per unpaid invoice', prompt: 'Log in with username "vendor" and password "hunter2", then download every unpaid invoice PDF' },
-  { label: 'Open the newest invoice', detail: 'find and open the latest one', prompt: 'Log in with username "vendor" and password "hunter2", then open the most recently issued invoice' },
-  { label: 'Summarize the invoice list', detail: 'read the table, report totals', prompt: 'Log in with username "vendor" and password "hunter2", then read the invoice table and tell me how many are unpaid and the total unpaid amount' },
+  { label: 'Top of Hacker News', detail: 'open the #1 story, summarize it', prompt: 'Go to news.ycombinator.com, open the top story, and summarize what it is about' },
+  { label: 'GitHub trending', detail: "today's top repo, explained", prompt: 'Go to github.com/trending, open the top repository, and tell me what it does' },
+  { label: 'Weather in Tokyo', detail: 'look it up, report back', prompt: 'Look up the current weather in Tokyo and report the temperature and conditions' },
+  { label: 'Wikipedia rabbit hole', detail: 'featured article, summarized', prompt: 'Go to wikipedia.org, open today’s featured article, and summarize it in three sentences' },
 ];
+
+function LoopMark({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3.2a8.8 8.8 0 1 1-8.1 5.4"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <circle cx="19.4" cy="6.2" r="2.5" fill="currentColor" />
+    </svg>
+  );
+}
 
 function SendIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
 function StopIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-      <rect x="6" y="6" width="12" height="12" rx="2" />
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="6" width="12" height="12" rx="2.5" />
     </svg>
   );
 }
 
 function Chevron() {
   return (
-    <svg className="lc-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+    <svg className="lp-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function GlobeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M3 12h18M12 3c2.6 2.5 3.9 5.6 3.9 9S14.6 18.5 12 21c-2.6-2.5-3.9-5.6-3.9-9S9.4 5.5 12 3z" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function SparkIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 2l1.9 6.1L20 10l-6.1 1.9L12 18l-1.9-6.1L4 10l6.1-1.9L12 2z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function formatClock(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const m = String(Math.floor(total / 60)).padStart(2, '0');
+  const s = String(total % 60).padStart(2, '0');
+  return `${m}:${s}`;
 }
 
 export default function ChatClient({
@@ -83,6 +122,8 @@ export default function ChatClient({
   const [starting, setStarting] = useState(false);
   const [address, setAddress] = useState(defaultStartUrl);
   const [lastUrl, setLastUrl] = useState(defaultStartUrl);
+  const [recStartedAt, setRecStartedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(Date.now());
 
   const threadRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -108,6 +149,12 @@ export default function ChatClient({
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
   }, [input]);
+
+  useEffect(() => {
+    if (!recording || recStartedAt == null) return;
+    const timer = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(timer);
+  }, [recording, recStartedAt]);
 
   const patch = (id: string, update: Partial<Message>) => {
     setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, ...update } : m)));
@@ -222,6 +269,7 @@ export default function ChatClient({
       if (!response.ok) throw new Error(data.error ?? 'Could not open the browser');
       activeRecording.current = { messageId, recordingId: data.id };
       setRecording(true);
+      setRecStartedAt(Date.now());
       patch(messageId, { debugUrl: data.debugUrl });
     } catch (error) {
       patch(messageId, { status: 'failed', error: error instanceof Error ? error.message : 'Could not open the browser' });
@@ -251,6 +299,7 @@ export default function ChatClient({
     const active = activeRecording.current;
     if (!active) return;
     setRecording(false);
+    setRecStartedAt(null);
     setCompiling(true);
     // Immediately show the compiling state and drop the (now-released) viewer.
     patch(active.messageId, { status: 'processing', debugUrl: undefined });
@@ -302,48 +351,50 @@ export default function ChatClient({
   const idle = !busy && !recording && !compiling;
 
   return (
-    <div className="lc-app loop-dark">
-      <aside className="lc-sidebar">
-        <div className="lc-brand">
-          <div className="lc-logo">l</div>
+    <div className="lp-app">
+      <aside className="lp-sidebar">
+        <div className="lp-brand">
+          <div className="lp-logo">
+            <LoopMark />
+          </div>
           <div>
-            <div className="lc-brand-name">loop</div>
-            <div className="lc-brand-sub">show it once, it does it forever</div>
+            <div className="lp-brand-name">loop</div>
+            <div className="lp-brand-sub">BROWSER AUTOMATION</div>
           </div>
         </div>
 
-        <button type="button" className="lc-new" onClick={newTask} disabled={!idle}>
+        <button type="button" className="lp-new" onClick={newTask} disabled={!idle}>
           + New task
         </button>
-        <button type="button" className="lc-side-link" onClick={() => void openBrowser()} disabled={!idle}>
-          ● Open a browser
+        <button type="button" className="lp-side-link" onClick={() => void openBrowser()} disabled={!idle}>
+          <span className="lp-led-static" />
+          Open a browser
         </button>
 
-        <div className="lc-section">Your loops</div>
-        <div className="lc-list">
+        <div className="lp-section">Your loops</div>
+        <div className="lp-list">
           {skills.length === 0 ? (
-            <div className="lc-empty-item">No saved loops yet</div>
+            <div className="lp-loop-empty">No saved loops yet</div>
           ) : (
             skills.map((skill) => (
-              <Link key={skill.id} href={`/run/${skill.id}`} className="lc-item">
+              <Link key={skill.id} href={`/run/${skill.id}`} className="lp-loop">
                 {skill.name}
                 <small>
-                  {skill.trigger.type}: {skill.trigger.value}
+                  {skill.trigger.type} · {skill.trigger.value}
                 </small>
               </Link>
             ))
           )}
         </div>
 
-        <div className="lc-side-foot">
-          <Link href="/library">Library</Link>
-          <Link href="/demo/vendor">Demo app</Link>
+        <div className="lp-side-foot">
+          <Link href="/library">Library →</Link>
         </div>
       </aside>
 
-      <main className="lc-main">
+      <main className="lp-main">
         <div
-          className="lc-thread"
+          className="lp-thread"
           ref={threadRef}
           onScroll={() => {
             const el = threadRef.current;
@@ -351,16 +402,42 @@ export default function ChatClient({
           }}
         >
           {messages.length === 0 ? (
-            <div className="lc-empty">
-              <h2>What should loop do?</h2>
-              <p>Open a browser and do the task yourself, or describe it and the agent does it. Either way you get a loop you can rerun.</p>
-              <button type="button" className="lc-btn primary" onClick={() => void openBrowser()} disabled={starting}>
-                {starting ? 'Opening…' : 'Open a browser'}
-              </button>
-              <div className="lc-or">or describe a task for the agent</div>
-              <div className="lc-chips">
+            <div className="lp-hero">
+              <div className="lp-hero-mark">
+                <LoopMark size={22} />
+              </div>
+              <p className="lp-kicker">loop — cloud browser automation</p>
+              <h1 className="lp-hero-title">
+                Show it once.
+                <br />
+                <em>It does it forever.</em>
+              </h1>
+              <p className="lp-hero-sub">
+                Drive a cloud browser yourself, or describe the task and let the agent work.
+                Either way, loop captures the steps and replays them on demand.
+              </p>
+
+              <div className="lp-actions">
+                <button type="button" className="lp-action" onClick={() => void openBrowser()} disabled={starting}>
+                  <span className="lp-action-icon">
+                    <GlobeIcon />
+                  </span>
+                  <div className="lp-action-title">{starting ? 'Opening…' : 'Open a browser'}</div>
+                  <div className="lp-action-sub">You drive. loop captures every click and keystroke.</div>
+                </button>
+                <button type="button" className="lp-action" onClick={() => textareaRef.current?.focus()}>
+                  <span className="lp-action-icon">
+                    <SparkIcon />
+                  </span>
+                  <div className="lp-action-title">Ask the agent</div>
+                  <div className="lp-action-sub">Describe the outcome. Watch it work, keep the loop.</div>
+                </button>
+              </div>
+
+              <div className="lp-or">or try an idea</div>
+              <div className="lp-chips">
                 {SUGGESTIONS.map((suggestion) => (
-                  <button key={suggestion.label} type="button" className="lc-chip" onClick={() => fill(suggestion.prompt)}>
+                  <button key={suggestion.label} type="button" className="lp-chip" onClick={() => fill(suggestion.prompt)}>
                     {suggestion.label}
                     <small>{suggestion.detail}</small>
                   </button>
@@ -368,26 +445,26 @@ export default function ChatClient({
               </div>
             </div>
           ) : (
-            <div className="lc-thread-inner">
+            <div className="lp-thread-inner">
               {messages.map((message) =>
                 message.role === 'user' ? (
-                  <div key={message.id} className="lc-msg user">
-                    <div className="lc-bubble">{message.text}</div>
+                  <div key={message.id} className="lp-msg user">
+                    <div className="lp-bubble">{message.text}</div>
                   </div>
                 ) : (
-                  <div key={message.id} className="lc-msg ai">
-                    <div className="lc-body">
-                      <div className="lc-status">
+                  <div key={message.id} className="lp-msg ai">
+                    <div className="lp-ai">
+                      <div className="lp-statusline">
                         {message.kind === 'browser' && message.status === 'running' ? (
-                          <span className="lc-recdot" />
+                          <span className="lp-led" />
                         ) : (
-                          <span className={`lc-dot ${message.status ?? 'running'}`} />
+                          <span className={`lp-orbit ${message.status ?? 'running'}`} />
                         )}
                         {message.kind === 'browser'
                           ? message.status === 'running'
-                            ? 'Browser'
+                            ? 'Recording'
                             : message.status === 'processing'
-                              ? 'Compiling…'
+                              ? 'Compiling'
                               : message.status === 'failed'
                                 ? 'Needs you'
                                 : `Recorded ${message.stepCount ?? 0} actions`
@@ -395,90 +472,92 @@ export default function ChatClient({
                             ? 'Done'
                             : message.status === 'failed'
                               ? 'Needs you'
-                              : 'Working…'}
-                        {message.summary ? <span className="lc-summary">— {message.summary}</span> : null}
+                              : 'Working'}
+                        {message.kind === 'browser' && message.status === 'running' && recStartedAt != null ? (
+                          <span className="lp-timer">{formatClock(now - recStartedAt)}</span>
+                        ) : null}
+                        {message.summary ? <span className="lp-summary">— {message.summary}</span> : null}
                       </div>
 
                       {message.kind === 'browser' && message.status === 'processing' ? (
-                        <div className="lc-activity open">
-                          <div className="lc-loading">
-                            <span className="lc-spinner" />
-                            <span className="lc-loading-label">Turning your recording into steps…</span>
-                            <div className="lc-skel">
-                              <span className="lc-skel-row" />
-                              <span className="lc-skel-row" />
-                              <span className="lc-skel-row" />
+                        <div className="lp-activity open">
+                          <div className="lp-loading">
+                            <span className="lp-spinner" />
+                            <span className="lp-loading-label">
+                              <em>Turning your recording into steps…</em>
+                            </span>
+                            <div className="lp-skel">
+                              <span className="lp-skel-row" />
+                              <span className="lp-skel-row" />
+                              <span className="lp-skel-row" />
                             </div>
                           </div>
                         </div>
                       ) : null}
 
                       {message.kind === 'browser' && message.status === 'running' && message.debugUrl ? (
-                        <div className="lc-activity open">
-                          <div className="lc-addressbar">
-                            <input
-                              className="lc-url"
-                              value={address}
-                              onChange={(event) => setAddress(event.target.value)}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                  event.preventDefault();
-                                  void navigate();
-                                }
-                              }}
-                              placeholder="Type a URL and press Enter"
-                              spellCheck={false}
-                            />
-                            <button type="button" className="lc-btn danger" onClick={stopRecording} disabled={starting}>
+                        <BrowserPane
+                          src={message.debugUrl}
+                          title="Recording browser"
+                          recording
+                          address={address}
+                          onAddressChange={setAddress}
+                          onNavigate={() => void navigate()}
+                          actions={
+                            <button type="button" className="lp-btn danger small" onClick={stopRecording} disabled={starting}>
                               Stop
                             </button>
-                          </div>
-                          <iframe src={message.debugUrl} title="Recording browser" className="lc-viewer" allow="clipboard-read; clipboard-write" />
-                        </div>
+                          }
+                        />
                       ) : null}
 
                       {message.kind !== 'browser' && ((message.steps?.length ?? 0) > 0 || message.status === 'running') ? (
-                        <div className={`lc-activity ${openIds.has(message.id) ? 'open' : ''}`}>
-                          <button type="button" className="lc-activity-head" onClick={() => toggle(message.id)}>
+                        <div className={`lp-activity ${openIds.has(message.id) ? 'open' : ''}`}>
+                          <button type="button" className="lp-activity-head" onClick={() => toggle(message.id)}>
                             <span>
                               {message.status === 'running' ? 'Activity' : `${message.steps?.length ?? 0} action${(message.steps?.length ?? 0) === 1 ? '' : 's'}`}
                             </span>
                             <Chevron />
                           </button>
                           {openIds.has(message.id) && (
-                            <div className="lc-activity-body">
+                            <div className="lp-activity-body">
                               {message.steps?.map((step) => (
-                                <div key={step.n} className="lc-step">
-                                  <span className="lc-step-action">{step.action}</span>
-                                  <span className="lc-step-detail">
+                                <div key={step.n} className="lp-tl">
+                                  <span className="lp-tl-action">{step.action}</span>
+                                  <span className="lp-tl-detail">
                                     {step.detail}
-                                    {step.result ? <span className="lc-step-result"> — {step.result}</span> : null}
+                                    {step.result ? <span className="lp-tl-result"> — {step.result}</span> : null}
                                   </span>
                                 </div>
                               ))}
-                              {message.steps?.length === 0 ? <p className="lc-step-result">Starting the browser…</p> : null}
+                              {message.steps?.length === 0 ? <p className="lp-tl-result">Starting the browser…</p> : null}
                             </div>
                           )}
                           {message.status === 'running' && message.debugUrl ? (
-                            <iframe src={message.debugUrl} title="Live browser" className="lc-viewer" allow="clipboard-read; clipboard-write" />
+                            <BrowserPane
+                              src={message.debugUrl}
+                              title="Live browser"
+                              label="live session — steel cloud"
+                              className="lp-browser--flush"
+                            />
                           ) : null}
                         </div>
                       ) : null}
 
-                      {message.status === 'failed' && message.error ? <p className="lc-error">{message.error}</p> : null}
+                      {message.status === 'failed' && message.error ? <p className="lp-error">{message.error}</p> : null}
                       {message.status === 'failed' && message.goal ? (
-                        <button type="button" className="lc-btn text" onClick={() => void send(message.goal!)}>
-                          Try again
+                        <button type="button" className="lp-btn ghost" onClick={() => void send(message.goal!)}>
+                          ↺ Try again
                         </button>
                       ) : null}
 
                       {message.recordingId ? (
-                        <div className="lc-card">
+                        <div className="lp-card">
                           <div>
-                            <div className="lc-card-title">Captured {message.stepCount ?? message.steps?.length ?? 0} actions</div>
-                            <div className="lc-card-sub">Review the plain-language steps, then save it as a loop.</div>
+                            <div className="lp-card-title">Captured {message.stepCount ?? message.steps?.length ?? 0} actions</div>
+                            <div className="lp-card-sub">Review the plain-language steps, then save it as a loop.</div>
                           </div>
-                          <Link href={`/review/${message.recordingId}`} className="lc-btn primary">
+                          <Link href={`/review/${message.recordingId}`} className="lp-btn primary">
                             Review &amp; save →
                           </Link>
                         </div>
@@ -491,8 +570,8 @@ export default function ChatClient({
           )}
         </div>
 
-        <div className="lc-composer">
-          <div className="lc-modes">
+        <div className="lp-composer">
+          <div className="lp-modes">
             <button type="button" className={mode === 'agent' ? 'active' : ''} onClick={() => setMode('agent')} disabled={busy || recording || compiling}>
               Ask the agent
             </button>
@@ -502,10 +581,10 @@ export default function ChatClient({
           </div>
 
           {mode === 'agent' ? (
-            <div className="lc-composer-inner">
+            <div className="lp-composer-inner">
               <textarea
                 ref={textareaRef}
-                className="lc-input"
+                className="lp-input"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 onKeyDown={(event) => {
@@ -519,31 +598,33 @@ export default function ChatClient({
                 disabled={busy || recording || compiling}
               />
               {busy ? (
-                <button type="button" className="lc-send" onClick={() => void stopAgent()} aria-label="Stop">
+                <button type="button" className="lp-send stop" onClick={() => void stopAgent()} aria-label="Stop">
                   <StopIcon />
                 </button>
               ) : (
-                <button type="button" className="lc-send" onClick={() => void send(input)} disabled={input.trim() === '' || recording} aria-label="Send">
+                <button type="button" className="lp-send" onClick={() => void send(input)} disabled={input.trim() === '' || recording} aria-label="Send">
                   <SendIcon />
                 </button>
               )}
             </div>
           ) : (
-            <div className="lc-composer-inner" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
-              <span style={{ color: 'var(--lc-muted)', fontSize: 13 }}>
+            <div className="lp-composer-inner" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ color: 'var(--lp-text-2)', fontSize: 13 }}>
                 {recording ? 'Type a URL above to navigate, then Stop when you finish.' : 'Opens a cloud browser you can drive.'}
               </span>
               {recording ? (
-                <button type="button" className="lc-btn danger" onClick={stopRecording}>
+                <button type="button" className="lp-btn danger" onClick={stopRecording}>
                   Stop
                 </button>
               ) : null}
             </div>
           )}
 
-          <div className="lc-hint">
-            <span>{mode === 'agent' ? 'Enter to run · Shift+Enter for a new line' : 'You drive the browser; we capture the steps.'}</span>
-            <span>{compiling ? 'Compiling…' : busy ? 'Running…' : recording ? 'Recording…' : 'Cloud browser'}</span>
+          <div className="lp-hint">
+            <span>{mode === 'agent' ? 'ENTER TO RUN · SHIFT+ENTER NEW LINE' : 'YOU DRIVE — WE CAPTURE THE STEPS'}</span>
+            <span className={compiling || busy ? 'lp-busy' : recording ? 'lp-live' : ''}>
+              {compiling ? 'COMPILING' : busy ? 'RUNNING' : recording ? 'REC' : 'CLOUD BROWSER'}
+            </span>
           </div>
         </div>
       </main>

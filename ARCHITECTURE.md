@@ -17,8 +17,8 @@ This document describes how the pieces fit together. For product framing and the
   not for replay.
 - **The review screen is the trust checkpoint.** Compiled steps are edited in place; original raw
   events stay available.
-- **Repro for the demo, generality by design.** The golden path targets a self-hosted invoice app,
-  but nothing in the pipeline is site-specific.
+- **Nothing in the pipeline is site-specific.** Any public site can be recorded and replayed;
+  the earlier self-hosted invoice demo app was removed once the round trip was proven.
 
 ---
 
@@ -44,10 +44,9 @@ This document describes how the pieces fit together. For product framing and the
   |  (Chromium) |                                      v
   +-------------+                                +-----------+
         |                                        | Anthropic |
-        |  reachable target site                |  Claude   |
-        v                                        +-----------+
-  demo app (/demo/vendor) via `npm run tunnel` (cloudflared)
-```
+        v                                        |  Claude   |
+  any reachable                            +-----------+
+  target site
 
 ---
 
@@ -92,7 +91,6 @@ recording); both feed the same compile → review → skill path.
 | `replay.ts` | `runSkill()`: locator chain, param resolution, download caching, release. |
 | `runs.ts` | In-flight replay run records (`globalThis`-backed). |
 | `db.ts` / `store.ts` | SQLite persistence for recordings and skills. |
-| `demo-data.ts` | Self-hosted invoice demo app data + a dependency-free PDF builder. |
 | `fixtures/*.ndjson` | Canned event streams used by tests and the offline compile path. |
 
 ### `app/`
@@ -104,9 +102,8 @@ recording); both feed the same compile → review → skill path.
 | `review/[id]/` | Step review + parameter editing + save. |
 | `run/[id]/` | Trigger a saved skill, watch it live, list downloads. |
 | `library/page.tsx` | List saved loops. |
-| `demo/vendor/` | The self-hosted "vendor.com" (login, invoice list, unpaid filter, PDF). |
 | `api/**` | HTTP surface, see §5. |
-| `globals.css` | Light utility styles + the dark `loop-dark` palette and chat/review/run classes. |
+| `globals.css` + `layout.tsx` | The "signal" design system: Space Grotesk UI, Instrument Serif display, JetBrains Mono data; ink + signal-lime tokens, glass panels, ambient glow, film grain. |
 
 ---
 
@@ -114,7 +111,7 @@ recording); both feed the same compile → review → skill path.
 
 | Method + path | Purpose |
 |---|---|
-| `POST /api/recordings` | Open a browser session (blank unless `startUrl`/`LOOP_DEMO_URL`); returns `{ id, sessionId, debugUrl }`. |
+| `POST /api/recordings` | Open a browser session (blank unless `startUrl` is given); returns `{ id, sessionId, debugUrl }`. |
 | `POST /api/recordings/[id]/navigate` | Navigate an open session from the in-app address bar. |
 | `POST /api/recordings/[id]/stop` | Release the session, persist the `Recording`, compile, return `{ recording, result }`. |
 | `GET /api/recordings/[id]` | Fetch a stored recording + compiled result. |
@@ -128,8 +125,6 @@ recording); both feed the same compile → review → skill path.
 | `GET /api/agent/[id]` | Poll an agent run (status, steps, `debugUrl`, `recordingId`). |
 | `DELETE /api/agent/[id]` | Stop an agent run (aborts the loop, releases the session). |
 | `GET /api/downloads/[runId]/[name]` | Serve a file cached before the session was released. |
-| `POST /demo/vendor/api/login` | Demo app login (sets a session cookie; honors `x-forwarded-*`). |
-| `GET /demo/vendor/invoices/[id]/pdf` | Demo app PDF (requires the session cookie). |
 
 All route handlers run on the Node runtime (`export const runtime = 'nodejs'`).
 
@@ -239,20 +234,13 @@ at `loop.db` (gitignored).
 
 ---
 
-## 12. Demo app and reachability
+## 12. Reachability
 
-The Steel cloud browser cannot reach `localhost`, so the self-hosted invoice app is exposed with a
-tunnel:
-
-```sh
-npm run tunnel                 # cloudflared tunnel --url http://localhost:3000
-# put the printed https://…trycloudflare.com in LOOP_DEMO_URL
-```
-
-`app/demo/vendor/**` is the "vendor.com": a native-form login (303 + cookie), an invoice list with
-an `?status=unpaid` filter, and a dependency-free PDF route. It uses stable `data-testid`s to make
-recording and replay reliable. Login redirects are built from `x-forwarded-*` headers so they work
-behind the tunnel.
+The Steel cloud browser cannot reach `localhost`, so recording against a local site requires
+exposing it publicly (a tunnel such as `cloudflared tunnel --url http://localhost:3000`, or a
+deployment) and navigating the in-app browser to that URL. (The self-hosted invoice demo app that
+previously shipped in this repo — `app/demo/vendor/**` — was removed; any public site can be the
+target now.)
 
 ---
 
@@ -264,7 +252,6 @@ Environment (server-side only; see `.env.example`):
 |---|---|
 | `STEEL_KEY` | Steel API key. |
 | `CLAUDE_KEY` | Anthropic API key (compiler + agent). |
-| `LOOP_DEMO_URL` | Public base URL of this app (tunnel/deploy); default browser + agent start page. |
 | `LOOP_SOLVE_CAPTCHA` | `1` to auto-solve captchas (paid Steel balance required). |
 | `LOOP_HUMANIZE` | `1` for human-like mouse movement. |
 | `LOOP_COMPILER_MODEL` / `LOOP_AGENT_MODEL` | Optional model overrides. |

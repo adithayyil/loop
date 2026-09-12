@@ -8,7 +8,6 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "tunnel": "cloudflared tunnel --url http://localhost:3000",
     "test": "node --test --experimental-strip-types lib/*.test.ts"
   },
   "keywords": [],

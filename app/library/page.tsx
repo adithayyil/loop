@@ -7,52 +7,54 @@ export default function LibraryPage() {
   const skills = store.skills.values();
 
   return (
-    <main className="dk-page loop-dark">
-      <div className="dk-wrap wide">
-        <div className="dk-head">
-          <h1 style={{ fontSize: 24, margin: 0 }}>Library</h1>
-          <Link href="/" className="dk-link">
-            Back to chat
+    <main className="lp-page">
+      <div className="lp-wrap wide">
+        <div className="lp-head">
+          <p className="lp-kicker">Library</p>
+          <Link href="/" className="lp-backlink">
+            ← Back to chat
           </Link>
         </div>
+        <h1 className="lp-h1">Your loops</h1>
+        <p className="lp-muted" style={{ fontSize: 13, marginTop: 6 }}>
+          {skills.length === 0 ? 'Nothing here yet.' : `${skills.length} saved loop${skills.length === 1 ? '' : 's'}.`}
+        </p>
 
         {skills.length === 0 ? (
-          <p className="dk-muted" style={{ marginTop: 16 }}>
-            No loops yet. <Link href="/">Open the chat</Link> to make one.
-          </p>
+          <div className="lp-empty-state">
+            <p className="lp-kicker">No loops yet</p>
+            <p>
+              Record a task once — replay it forever.
+            </p>
+            <Link href="/" className="lp-btn primary">
+              Make your first loop →
+            </Link>
+          </div>
         ) : (
-          <table className="dk-table" style={{ marginTop: 16 }}>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Trigger</th>
-                <th>Steps</th>
-                <th>Auth</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {skills.map((skill) => (
-                <tr key={skill.id}>
-                  <td style={{ fontWeight: 600 }}>{skill.name}</td>
-                  <td>
-                    <code style={{ fontSize: 12 }}>
-                      {skill.trigger.type}: {skill.trigger.value}
-                    </code>
-                  </td>
-                  <td>{skill.steps.length}</td>
-                  <td className="dk-muted" style={{ fontSize: 12 }}>
-                    {skill.profileId ? 'saved login' : '—'}
-                  </td>
-                  <td style={{ textAlign: 'right' }}>
-                    <Link href={`/run/${skill.id}`} className="dk-btn small">
-                      Run
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="lp-lib">
+            {skills.map((skill) => (
+              <div key={skill.id} className="lp-librow">
+                <span className="lp-librow-name">{skill.name}</span>
+                <span className="lp-chipmono">
+                  {skill.trigger.type} · {skill.trigger.value}
+                </span>
+                <span className="lp-libmeta">{skill.steps.length} steps</span>
+                <span className="lp-libmeta">
+                  {skill.profileId ? (
+                    <>
+                      <span className="lp-authdot" />
+                      saved login
+                    </>
+                  ) : (
+                    'no login'
+                  )}
+                </span>
+                <Link href={`/run/${skill.id}`} className="lp-btn small lp-run-cta">
+                  Run →
+                </Link>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </main>

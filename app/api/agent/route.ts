@@ -19,11 +19,9 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { goal?: unknown; startUrl?: unknown };
   const goal = typeof body.goal === 'string' ? body.goal.trim() : '';
   const startUrl =
-    typeof body.startUrl === 'string' && body.startUrl.trim()
-      ? body.startUrl.trim()
-      : process.env.LOOP_DEMO_URL;
+    typeof body.startUrl === 'string' && body.startUrl.trim() ? body.startUrl.trim() : 'about:blank';
 
-  if (!goal || !startUrl) {
+  if (!goal) {
     return NextResponse.json({ error: 'goal and startUrl are required' }, { status: 400 });
   }
 
