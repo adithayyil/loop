@@ -107,183 +107,175 @@ export default function ReviewClient({
   };
 
   return (
-    <main className="container">
-      <div className="topbar">
-        <p className="eyebrow">Review recording</p>
-        <Link href="/library" className="small">
-          Library
-        </Link>
-      </div>
-      <input className="title-input" value={name} onChange={(e) => setName(e.target.value)} />
-      <p className="muted" style={{ marginTop: 2 }}>{initial.summary}</p>
-      <p style={{ marginTop: 10 }}>
-        {variableCount > 0 ? (
-          <span className="badge">{variableCount} value{variableCount === 1 ? '' : 's'} change each run</span>
-        ) : (
-          <span className="badge neutral">All values are fixed</span>
-        )}
-      </p>
+    <main className="dk-page loop-dark">
+      <div className="dk-wrap">
+        <div className="dk-head">
+          <p className="dk-eyebrow">Review</p>
+          <Link href="/" className="dk-link">
+            Back to chat
+          </Link>
+        </div>
 
-      <p className="helper">
-        Click a highlighted value to choose whether it stays the same or changes each run.
-        Edit any step text directly.
-      </p>
-
-      <section className="card steps">
-        {steps.map((step, index) => {
-          const pillValue = step.value ?? step.param?.value;
-          const showPill = pillValue != null || step.param != null;
-          const variable = step.param?.mode === 'variable';
-          return (
-            <div key={index} className="step">
-              <div className="step-num">{step.n}</div>
-              <div className="step-body">
-                <input
-                  className="step-text"
-                  value={step.text}
-                  onChange={(e) => updateStep(index, { text: e.target.value })}
-                />
-                {showPill && (
-                  <div className="menu-wrap">
-                    <button
-                      type="button"
-                      className={`pill${variable ? ' variable' : ''}`}
-                      onClick={() => setMenuFor(menuFor === index ? null : index)}
-                    >
-                      <strong>{pillValue}</strong>
-                      <span>{variable ? 'changes each time' : 'always the same'}</span>
-                    </button>
-                    {menuFor === index && (
-                      <div className="menu">
-                        {variable && step.param && (
-                          <div style={{ padding: '4px 6px 0' }}>
-                            <label>parameter name</label>
-                            <input
-                              className="field"
-                              value={step.param.name}
-                              onChange={(e) =>
-                                updateStep(index, {
-                                  param: { name: e.target.value, mode: 'variable', value: step.value },
-                                })
-                              }
-                            />
-                          </div>
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMode(index, 'variable');
-                            setMenuFor(null);
-                          }}
-                        >
-                          <span>Changes each time</span>
-                          {variable && <span className="check">✓</span>}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setMode(index, 'fixed');
-                            setMenuFor(null);
-                          }}
-                        >
-                          <span>Always the same</span>
-                          {!variable && step.param && <span className="check">✓</span>}
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="step-actions">
-                {index < steps.length - 1 && (
-                  <button type="button" className="btn btn-small" onClick={() => mergeDown(index)}>
-                    merge
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="btn btn-small"
-                  onClick={() => removeStep(index)}
-                  title="Delete step"
-                >
-                  delete
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </section>
-
-      <button
-        type="button"
-        className="btn btn-ghost small"
-        style={{ marginTop: 12 }}
-        onClick={() => setShowEvents((v) => !v)}
-      >
-        {showEvents ? 'Hide original events' : 'View original events'}
-      </button>
-      {showEvents && <pre className="events">{events.map((e) => JSON.stringify(e)).join('\n')}</pre>}
-
-      <section className="card" style={{ padding: 20, marginTop: 32 }}>
-        <h2 style={{ fontSize: 16, margin: 0 }}>Name it and set a trigger</h2>
-        <p className="muted small" style={{ marginTop: 4 }}>
-          Run it on demand, or exactly like this every time.
+        <input className="dk-title" value={name} onChange={(e) => setName(e.target.value)} />
+        <p className="dk-muted" style={{ marginTop: 2 }}>
+          {initial.summary}
+        </p>
+        <p style={{ marginTop: 10 }}>
+          {variableCount > 0 ? (
+            <span className="dk-badge">
+              {variableCount} value{variableCount === 1 ? '' : 's'} change each run
+            </span>
+          ) : (
+            <span className="dk-badge neutral">All values are fixed</span>
+          )}
         </p>
 
-        {savedId ? (
-          <div className="save-success" style={{ marginTop: 16 }}>
-            <strong>Saved.</strong>
-            <Link href={`/run/${savedId}`} className="btn btn-primary">
-              Run it now →
-            </Link>
-            <Link href="/library">Go to library</Link>
-          </div>
-        ) : (
-          <>
-            <div className="segmented" style={{ marginTop: 14 }}>
-              <button
-                type="button"
-                className={triggerType === 'phrase' ? 'active' : ''}
-                onClick={() => setTriggerType('phrase')}
-              >
-                Phrase
-              </button>
-              <button
-                type="button"
-                className={triggerType === 'schedule' ? 'active' : ''}
-                onClick={() => setTriggerType('schedule')}
-              >
-                Schedule
-              </button>
+        <p className="dk-helper">
+          Click a value to choose whether it stays the same or changes each run. Edit any step text
+          directly.
+        </p>
+
+        <section className="dk-card dk-list">
+          {steps.map((step, index) => {
+            const pillValue = step.value ?? step.param?.value;
+            const showPill = pillValue != null || step.param != null;
+            const variable = step.param?.mode === 'variable';
+            return (
+              <div key={index} className="dk-row">
+                <div className="dk-num">{step.n}</div>
+                <div className="dk-rowbody">
+                  <input
+                    className="dk-text"
+                    value={step.text}
+                    onChange={(e) => updateStep(index, { text: e.target.value })}
+                  />
+                  {showPill && (
+                    <div className="dk-pill-wrap">
+                      <button
+                        type="button"
+                        className={`dk-pill${variable ? ' variable' : ''}`}
+                        onClick={() => setMenuFor(menuFor === index ? null : index)}
+                      >
+                        <strong>{pillValue}</strong>
+                        <span>{variable ? 'changes each time' : 'always the same'}</span>
+                      </button>
+                      {menuFor === index && (
+                        <div className="dk-menu">
+                          {variable && step.param && (
+                            <div style={{ padding: '4px 6px 0' }}>
+                              <label>parameter name</label>
+                              <input
+                                className="dk-input"
+                                value={step.param.name}
+                                onChange={(e) =>
+                                  updateStep(index, {
+                                    param: { name: e.target.value, mode: 'variable', value: step.value },
+                                  })
+                                }
+                              />
+                            </div>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMode(index, 'variable');
+                              setMenuFor(null);
+                            }}
+                          >
+                            <span>Changes each time</span>
+                            {variable && <span className="dk-check">✓</span>}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMode(index, 'fixed');
+                              setMenuFor(null);
+                            }}
+                          >
+                            <span>Always the same</span>
+                            {!variable && step.param && <span className="dk-check">✓</span>}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="dk-rowactions">
+                  {index < steps.length - 1 && (
+                    <button type="button" className="dk-btn small ghost" onClick={() => mergeDown(index)}>
+                      merge
+                    </button>
+                  )}
+                  <button type="button" className="dk-btn small ghost" onClick={() => removeStep(index)} title="Delete step">
+                    delete
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </section>
+
+        <button type="button" className="dk-btn ghost" style={{ marginTop: 12 }} onClick={() => setShowEvents((v) => !v)}>
+          {showEvents ? 'Hide original events' : 'View original events'}
+        </button>
+        {showEvents && <pre className="dk-events">{events.map((e) => JSON.stringify(e)).join('\n')}</pre>}
+
+        <section className="dk-save">
+          <h2 style={{ fontSize: 16, margin: 0 }}>Name it and set a trigger</h2>
+          <p className="dk-muted" style={{ marginTop: 4, fontSize: 13 }}>
+            Run it on demand, or exactly like this every time.
+          </p>
+
+          {savedId ? (
+            <div className="dk-success">
+              <strong>Saved.</strong>
+              <Link href={`/run/${savedId}`} className="dk-btn primary">
+                Run it now →
+              </Link>
+              <Link href="/library" className="dk-link">
+                Go to library
+              </Link>
             </div>
-            <div style={{ marginTop: 10 }}>
-              {triggerType === 'phrase' ? (
-                <input
-                  className="field"
-                  value={phrase}
-                  onChange={(e) => setPhrase(e.target.value)}
-                  placeholder='e.g. "download unpaid invoices"'
-                />
-              ) : (
-                <input
-                  className="field"
-                  value={schedule}
-                  onChange={(e) => setSchedule(e.target.value)}
-                  placeholder="0 9 * * 1"
-                  style={{ fontFamily: 'monospace' }}
-                />
-              )}
-            </div>
-            {error && <p style={{ color: 'var(--red)', fontSize: 13 }}>{error}</p>}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 16 }}>
-              <button type="button" className="btn btn-primary" onClick={save} disabled={saving}>
-                {saving ? 'Saving…' : 'Looks good — save it'}
-              </button>
-              <span className="muted small">or keep refining above</span>
-            </div>
-          </>
-        )}
-      </section>
+          ) : (
+            <>
+              <div className="dk-seg" style={{ marginTop: 14 }}>
+                <button type="button" className={triggerType === 'phrase' ? 'active' : ''} onClick={() => setTriggerType('phrase')}>
+                  Phrase
+                </button>
+                <button type="button" className={triggerType === 'schedule' ? 'active' : ''} onClick={() => setTriggerType('schedule')}>
+                  Schedule
+                </button>
+              </div>
+              <div style={{ marginTop: 10 }}>
+                {triggerType === 'phrase' ? (
+                  <input
+                    className="dk-input"
+                    value={phrase}
+                    onChange={(e) => setPhrase(e.target.value)}
+                    placeholder='e.g. "download unpaid invoices"'
+                  />
+                ) : (
+                  <input
+                    className="dk-input mono"
+                    value={schedule}
+                    onChange={(e) => setSchedule(e.target.value)}
+                    placeholder="0 9 * * 1"
+                  />
+                )}
+              </div>
+              {error && <p className="dk-error">{error}</p>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 16 }}>
+                <button type="button" className="dk-btn primary" onClick={save} disabled={saving}>
+                  {saving ? 'Saving…' : 'Looks good — save it'}
+                </button>
+                <span className="dk-muted" style={{ fontSize: 13 }}>
+                  or keep refining above
+                </span>
+              </div>
+            </>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

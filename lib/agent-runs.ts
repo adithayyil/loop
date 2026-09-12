@@ -15,7 +15,12 @@ export interface AgentRecord {
 }
 
 const globalRef = globalThis as unknown as { __loopAgentRuns?: Map<string, AgentRecord> };
+const controllersRef = globalThis as unknown as { __loopAgentControllers?: Map<string, AbortController> };
 
 /** globalThis-backed so the polling route sees runs started by the agent route. */
 export const agentRuns: Map<string, AgentRecord> =
   globalRef.__loopAgentRuns ?? (globalRef.__loopAgentRuns = new Map());
+
+/** Server-side abort handles (never serialized to the client). */
+export const agentControllers: Map<string, AbortController> =
+  controllersRef.__loopAgentControllers ?? (controllersRef.__loopAgentControllers = new Map());

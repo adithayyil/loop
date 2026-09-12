@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { runAgent } from '@/lib/agent';
-import { agentRuns, type AgentRecord } from '@/lib/agent-runs';
+import { agentControllers, agentRuns, type AgentRecord } from '@/lib/agent-runs';
 import { anthropicInferer } from '@/lib/anthropic';
 import { compile } from '@/lib/compiler';
 import { profileForSession, steelClient } from '@/lib/steel';
@@ -36,12 +36,15 @@ export async function POST(request: Request) {
     startedAt: Date.now(),
   };
   agentRuns.set(record.id, record);
+  const controller = new AbortController();
+  agentControllers.set(record.id, controller);
 
   void (async () => {
     try {
       const result = await runAgent({
         goal,
         startUrl,
+        signal: controller.signal,
         onSession: (sessionId, debugUrl) => {
           record.sessionId = sessionId;
           record.debugUrl = debugUrl;
@@ -88,6 +91,8 @@ export async function POST(request: Request) {
     } catch (error) {
       record.status = 'failed';
       record.error = error instanceof Error ? error.message : 'Agent run failed';
+    } finally {
+      agentControllers.delete(record.id);
     }
   })();
 

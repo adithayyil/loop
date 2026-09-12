@@ -30,6 +30,8 @@ export interface RunAgentOptions {
   goal: string;
   startUrl: string;
   maxSteps?: number;
+  timeoutMs?: number;
+  signal?: AbortSignal;
   onSession?: (sessionId: string, debugUrl: string) => void;
   onStep?: (step: AgentStep) => void;
 }
@@ -43,10 +45,15 @@ Rules:
 - If several elements share a name, pass a zero-based "nth" to pick one.
 - After typing into a field, you may pass submit:true to press Enter.
 - Work step by step; do not skip ahead. If a page is loading, use wait.
+- If the page already contains what the goal asks for, call "done" immediately with the
+  answer in the summary — do not keep scrolling. Only scroll when the target is clearly
+  below the fold, and at most once or twice.
+- Never repeat the same action more than twice in a row; if it isn't working, try a
+  different approach or call "fail".
 - Never enter real credentials unless the goal provides them. Never pay, delete data, or
   change account settings unless the goal explicitly asks.
-- When the goal is achieved, call "done" with a one-sentence summary. If you are truly stuck
-  after several attempts, call "fail" with the reason.
+- When the goal is achieved, call "done" with a one-sentence summary (include the answer
+  if the goal was a question). If you are truly stuck, call "fail" with the reason.
 - Keep going until done; you have a limited number of steps.`;
 
 const TOOLS: Anthropic.Tool[] = [
@@ -262,8 +269,22 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     const messages: Anthropic.MessageParam[] = [
       { role: 'user', content: `Goal: ${options.goal}\nStart URL: ${options.startUrl}` },
     ];
+    const deadline = Date.now() + (options.timeoutMs ?? 120_000);
+    let lastSignature = '';
+    let repeats = 0;
 
     for (let i = 0; i < maxSteps; i += 1) {
+      if (options.signal?.aborted) {
+        result.error = 'Stopped';
+        emit({ n: steps.length + 1, action: 'stopped', detail: 'Stopped by you' });
+        break;
+      }
+      if (Date.now() > deadline) {
+        result.error = 'Timed out before finishing — try a more specific goal.';
+        emit({ n: steps.length + 1, action: 'needs-you', detail: 'Time limit reached' });
+        break;
+      }
+
       const observation = await observe(page);
       messages.push({ role: 'user', content: observation });
 
@@ -294,6 +315,17 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       if (toolUse.name === 'fail') {
         result.error = typeof input.reason === 'string' ? input.reason : 'Agent reported failure';
         emit({ n: steps.length + 1, action: 'fail', detail: result.error });
+        break;
+      }
+
+      // Bail out when the agent keeps doing the same unproductive thing.
+      const signature = `${toolUse.name}:${JSON.stringify(input)}`;
+      if (signature === lastSignature && toolUse.name !== 'wait') repeats += 1;
+      else repeats = 0;
+      lastSignature = signature;
+      if (repeats >= 2) {
+        result.error = `The agent got stuck repeating "${toolUse.name}" without progress on this page.`;
+        emit({ n: steps.length + 1, action: 'needs-you', detail: 'Stuck repeating an action — stopping' });
         break;
       }
 
@@ -331,7 +363,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
 }
 
 function describeInput(name: string, input: Record<string, unknown>): string {
-  const target = input.name ?? input.label ?? input.placeholder ?? input.text ?? input.url ?? '';
+  const target =
+    input.name ?? input.label ?? input.placeholder ?? input.text ?? input.url ?? input.direction ?? '';
   const value = input.value ?? input.key ?? input.summary ?? input.reason ?? '';
   return `${target}${value ? ` → ${value}` : ''}`.trim() || name;
 }

@@ -16,6 +16,7 @@ interface ActiveCapture {
   startedAt: number;
   events: RecordedEvent[];
   browser: Browser;
+  page: Page;
   client: Steel;
   ndjson: fs.WriteStream;
 }
@@ -29,8 +30,15 @@ const active: Map<string, ActiveCapture> =
   globalRef.__loopCaptures ?? (globalRef.__loopCaptures = new Map());
 
 export interface StartRecordingOptions {
-  startUrl: string;
+  startUrl?: string;
   timeoutMs?: number;
+}
+
+/** Navigate an open recording session (the in-app address bar). */
+export async function navigateRecording(id: string, url: string): Promise<void> {
+  const capture = active.get(id);
+  if (!capture) throw new Error(`No active recording "${id}"`);
+  await capture.page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30_000 });
 }
 
 /**
@@ -79,7 +87,9 @@ export async function startRecording(opts: StartRecordingOptions): Promise<Recor
   for (const page of context.pages()) await attach(page);
 
   const page = context.pages()[0] ?? (await context.newPage());
-  await page.goto(opts.startUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  if (opts.startUrl) {
+    await page.goto(opts.startUrl, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  }
 
   active.set(id, {
     id,
@@ -88,6 +98,7 @@ export async function startRecording(opts: StartRecordingOptions): Promise<Recor
     startedAt,
     events,
     browser,
+    page,
     client,
     ndjson,
   });

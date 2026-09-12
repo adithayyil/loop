@@ -60,100 +60,118 @@ export default function RunClient({ skill }: { skill: Skill }) {
           : null;
 
   return (
-    <main className="container container-wide">
-      <div className="topbar">
-        <h1 style={{ fontSize: 22, margin: 0 }}>{skill.name}</h1>
-        <Link href="/library">Library</Link>
-      </div>
-      <p className="muted small">
-        Trigger: <code>{skill.trigger.type}: {skill.trigger.value}</code>
-        {skill.profileId ? ' · saved login reused' : ' · no saved login'}
-      </p>
+    <main className="dk-page loop-dark">
+      <div className="dk-wrap wide">
+        <div className="dk-head">
+          <h1 style={{ fontSize: 22, margin: 0 }}>{skill.name}</h1>
+          <Link href="/" className="dk-link">
+            Back to chat
+          </Link>
+        </div>
+        <p className="dk-muted" style={{ fontSize: 13 }}>
+          Trigger: <code>{skill.trigger.type}: {skill.trigger.value}</code>
+          {skill.profileId ? ' · saved login reused' : ' · no saved login'}
+        </p>
 
-      {banner && <div className={`banner ${banner.cls}`}>{banner.text}</div>}
+        {banner && <div className={`dk-banner ${banner.cls}`}>{banner.text}</div>}
 
-      {record?.debugUrl && (
-        <section style={{ margin: '12px 0' }}>
-          <iframe src={record.debugUrl} title="Steel live session" className="viewer" allow="clipboard-read; clipboard-write" />
-          <div style={{ display: 'flex', gap: 12, marginTop: 8, alignItems: 'center' }}>
-            <a href={record.debugUrl} target="_blank" rel="noreferrer" className="small">
-              Take over in a new tab
-            </a>
-            <span className="muted small">we don&apos;t see what you type</span>
-          </div>
-        </section>
-      )}
-
-      {!running && !finished && variableParams.length > 0 && (
-        <section style={{ marginTop: 8 }}>
-          <h2 className="eyebrow" style={{ marginBottom: 8 }}>Ask each time</h2>
-          {variableParams.map((step) => (
-            <label key={step.param!.name} style={{ display: 'block', marginBottom: 10, fontSize: 14 }}>
-              <span className="muted small" style={{ display: 'block' }}>
-                {step.param!.name} — {step.text}
+        {record?.debugUrl && (
+          <section style={{ margin: '12px 0' }}>
+            <iframe src={record.debugUrl} title="Steel live session" className="dk-viewer" allow="clipboard-read; clipboard-write" />
+            <div style={{ display: 'flex', gap: 12, marginTop: 8, alignItems: 'center' }}>
+              <a href={record.debugUrl} target="_blank" rel="noreferrer" className="dk-link">
+                Take over in a new tab
+              </a>
+              <span className="dk-muted" style={{ fontSize: 12 }}>
+                we don&apos;t see what you type
               </span>
-              <input
-                className="field"
-                value={params[step.param!.name] ?? ''}
-                onChange={(e) => setParams((prev) => ({ ...prev, [step.param!.name]: e.target.value }))}
-              />
-            </label>
-          ))}
-        </section>
-      )}
+            </div>
+          </section>
+        )}
 
-      {!finished && (
-        <button type="button" className="btn btn-primary" onClick={start} disabled={running} style={{ marginTop: 8 }}>
-          {running ? 'Running…' : runId ? 'Run again' : 'Run now'}
-        </button>
-      )}
-
-      {finished && result && (
-        <section className="card" style={{ padding: 20, marginTop: 18 }}>
-          <p style={{ margin: 0 }}>
-            {result.stepsRun}/{result.totalSteps} steps
-            {result.skipped ? ` · ${result.skipped} skipped (already signed in)` : ''}
-            {result.finalUrl ? <> · final URL <code>{result.finalUrl}</code></> : null}
-          </p>
-          <h2 className="eyebrow" style={{ margin: '16px 0 6px' }}>Downloads</h2>
-          {result.files.length === 0 ? (
-            <p className="muted small">No files downloaded.</p>
-          ) : (
-            <ul>
-              {result.files.map((file) => (
-                <li key={file.path}>
-                  <a href={`/api/downloads/${runId}/${file.name}`}>
-                    <code>{file.name}</code>
-                  </a>{' '}
-                  <span className="muted small">({file.size} bytes)</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <p className="muted small">Next runs will be silent.</p>
-          <button
-            type="button"
-            className="btn"
-            onClick={() => {
-              setRunId(null);
-              setRecord(null);
-            }}
-          >
-            Run again
-          </button>
-        </section>
-      )}
-
-      {!running && (
-        <details style={{ marginTop: 24 }}>
-          <summary className="muted small" style={{ cursor: 'pointer' }}>Steps</summary>
-          <ol style={{ color: '#3f3f46', fontSize: 14 }}>
-            {skill.steps.map((step) => (
-              <li key={step.n}>{step.text}</li>
+        {!running && !finished && variableParams.length > 0 && (
+          <section style={{ marginTop: 8 }}>
+            <h2 className="dk-eyebrow" style={{ marginBottom: 8 }}>
+              Ask each time
+            </h2>
+            {variableParams.map((step) => (
+              <label key={step.param!.name} style={{ display: 'block', marginBottom: 10, fontSize: 14 }}>
+                <span className="dk-muted" style={{ display: 'block', fontSize: 12 }}>
+                  {step.param!.name} — {step.text}
+                </span>
+                <input
+                  className="dk-input"
+                  value={params[step.param!.name] ?? ''}
+                  onChange={(e) => setParams((prev) => ({ ...prev, [step.param!.name]: e.target.value }))}
+                />
+              </label>
             ))}
-          </ol>
-        </details>
-      )}
+          </section>
+        )}
+
+        {!finished && (
+          <button type="button" className="dk-btn primary" onClick={start} disabled={running} style={{ marginTop: 8 }}>
+            {running ? 'Running…' : runId ? 'Run again' : 'Run now'}
+          </button>
+        )}
+
+        {finished && result && (
+          <section className="dk-save">
+            <p style={{ margin: 0 }}>
+              {result.stepsRun}/{result.totalSteps} steps
+              {result.skipped ? ` · ${result.skipped} skipped (already signed in)` : ''}
+              {result.finalUrl ? <> · final URL <code>{result.finalUrl}</code></> : null}
+            </p>
+            <h2 className="dk-eyebrow" style={{ margin: '16px 0 6px' }}>
+              Downloads
+            </h2>
+            {result.files.length === 0 ? (
+              <p className="dk-muted" style={{ fontSize: 13 }}>
+                No files downloaded.
+              </p>
+            ) : (
+              <ul>
+                {result.files.map((file) => (
+                  <li key={file.path}>
+                    <a href={`/api/downloads/${runId}/${file.name}`}>
+                      <code>{file.name}</code>
+                    </a>{' '}
+                    <span className="dk-muted" style={{ fontSize: 12 }}>
+                      ({file.size} bytes)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p className="dk-muted" style={{ fontSize: 12 }}>
+              Next runs will be silent.
+            </p>
+            <button
+              type="button"
+              className="dk-btn"
+              onClick={() => {
+                setRunId(null);
+                setRecord(null);
+              }}
+            >
+              Run again
+            </button>
+          </section>
+        )}
+
+        {!running && (
+          <details style={{ marginTop: 24 }}>
+            <summary className="dk-muted" style={{ cursor: 'pointer', fontSize: 13 }}>
+              Steps
+            </summary>
+            <ol className="dk-steps">
+              {skill.steps.map((step) => (
+                <li key={step.n}>{step.text}</li>
+              ))}
+            </ol>
+          </details>
+        )}
+      </div>
     </main>
   );
 }
