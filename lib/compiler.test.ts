@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { deterministicSteps, normalize } from './compiler.ts';
+import { deterministicSteps, hasRepeatIntent, normalize } from './compiler.ts';
 import type { RecordedEvent } from './types.ts';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -110,4 +110,86 @@ test('deterministicSteps keeps one step per action with bound locators', () => {
   assert.match(result.steps[1].text, /buy milk/);
   assert.equal(result.steps[1].value, 'buy milk');
   assert.equal(result.steps[4].name, 'Active');
+});
+
+test('deterministicSteps marks the last actionable step as a loop on repeat intent', () => {
+  const actions = normalize(loadFixture('roundtrip-events.ndjson'));
+
+  const repeated = deterministicSteps(actions, { title: 'download each invoice PDF' });
+  const looped = repeated.steps.filter((step) => step.loop?.each);
+  assert.equal(looped.length, 1);
+  assert.equal(looped[0].n, repeated.steps.length);
+  assert.equal(looped[0].action, 'click');
+
+  const single = deterministicSteps(actions, { title: 'add a todo' });
+  assert.equal(single.steps.some((step) => step.loop), false);
+});
+
+test('hasRepeatIntent detects each/every/all in the goal or narration', () => {
+  assert.equal(hasRepeatIntent({ title: 'download each PDF' }), true);
+  assert.equal(hasRepeatIntent({ narration: 'go through every row' }), true);
+  assert.equal(hasRepeatIntent({ title: 'download all invoices' }), true);
+  assert.equal(hasRepeatIntent({ title: 'download the first invoice' }), false);
+});
+
+test('normalize absorbs the trailing change and submit click after Enter', () => {
+  const url = 'https://www.gutenberg.org/';
+  const events: RecordedEvent[] = [
+    { ts: 1, type: 'navigate', url },
+    { ts: 2, type: 'enter', url, css: 'input[name="query"]', role: 'textbox', name: 'Search books', value: 'Moby Dick' },
+    { ts: 3, type: 'change', url, css: 'input[name="query"]', role: 'textbox', name: 'Search books', value: 'Moby Dick' },
+    { ts: 4, type: 'click', url, css: 'button', role: 'button', name: 'Go!' },
+    { ts: 5, type: 'navigate', url: `${url}ebooks/search/?query=Moby+Dick` },
+  ];
+
+  const actions = normalize(events);
+
+  assert.deepEqual(actions.map((a) => a.kind), ['goto', 'type+enter']);
+  assert.equal(actions[1].value, 'Moby Dick');
+  assert.equal(actions[1].css, 'input[name="query"]');
+});
+
+test('normalize absorbs the submit click when change precedes Enter', () => {
+  const url = 'https://en.wikipedia.org/wiki/Main_Page';
+  const events: RecordedEvent[] = [
+    { ts: 1, type: 'navigate', url },
+    { ts: 2, type: 'change', url, css: 'input#searchInput', role: 'searchbox', name: 'Search', value: 'Photosynthesis' },
+    { ts: 3, type: 'enter', url, css: 'input#searchInput', role: 'searchbox', name: 'Search', value: 'Photosynthesis' },
+    { ts: 4, type: 'click', url, css: 'button', role: 'button', name: 'Search' },
+    { ts: 5, type: 'navigate', url: 'https://en.wikipedia.org/wiki/Photosynthesis' },
+  ];
+
+  const actions = normalize(events);
+
+  assert.deepEqual(actions.map((a) => a.kind), ['goto', 'type+enter']);
+});
+
+test('normalize keeps a genuine link click after Enter', () => {
+  const url = 'https://example.com/';
+  const events: RecordedEvent[] = [
+    { ts: 1, type: 'navigate', url },
+    { ts: 2, type: 'enter', url, css: '#q', role: 'textbox', name: 'Query', value: 'x' },
+    { ts: 3, type: 'change', url, css: '#q', role: 'textbox', name: 'Query', value: 'x' },
+    { ts: 4, type: 'click', url, css: 'a.result', role: 'link', name: 'First result' },
+    { ts: 5, type: 'navigate', url: 'https://example.com/first' },
+  ];
+
+  const actions = normalize(events);
+
+  assert.deepEqual(actions.map((a) => a.kind), ['goto', 'type+enter', 'click']);
+  assert.equal(actions[2].name, 'First result');
+});
+
+test('normalize keeps a click-submitted fill when there was no Enter', () => {
+  const url = 'https://example.com/login';
+  const events: RecordedEvent[] = [
+    { ts: 1, type: 'navigate', url },
+    { ts: 2, type: 'change', url, css: '#user', role: 'textbox', name: 'User', value: 'vendor' },
+    { ts: 3, type: 'click', url, css: 'button', role: 'button', name: 'Sign in' },
+  ];
+
+  const actions = normalize(events);
+
+  assert.deepEqual(actions.map((a) => a.kind), ['goto', 'fill', 'click']);
+  assert.equal(actions[1].value, 'vendor');
 });

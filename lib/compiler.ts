@@ -52,6 +52,9 @@ export function normalize(events: RecordedEvent[]): Action[] {
   const pending = new Map<string, Action>();
   let lastNavUrl: string | null = null;
   let lastClickKey: string | null = null;
+  // The last Enter we emitted, so we can absorb the browser's follow-up `change`
+  // and implicit submit click instead of recording them as extra actions.
+  let lastSubmit: { key: string; url: string; value: string } | null = null;
 
   const flushPending = () => {
     for (const action of pending.values()) actions.push(action);
@@ -70,6 +73,7 @@ export function normalize(events: RecordedEvent[]): Action[] {
     if (isChallengeEvent(event)) continue;
 
     if (event.type === 'navigate') {
+      lastSubmit = null;
       if (event.url && event.url !== 'about:blank' && event.url !== lastNavUrl) {
         flushPending();
         // A navigation right after a click or Enter is that action's outcome, not a
@@ -89,6 +93,10 @@ export function normalize(events: RecordedEvent[]): Action[] {
     const key = keyOf(event);
 
     if (event.type === 'change') {
+      // Browsers fire `change` after the keydown that submitted, so a change that
+      // repeats the value we just typed+entered is the same edit, not a fill.
+      if (lastSubmit && lastSubmit.key === key && event.value === lastSubmit.value) continue;
+      lastSubmit = null;
       if (key === lastClickKey) continue;
       if (event.value != null && event.value !== '') {
         pending.set(key, { kind: 'fill', ...targetOf(event), value: event.value });
@@ -100,11 +108,25 @@ export function normalize(events: RecordedEvent[]): Action[] {
       pending.delete(key);
       if (event.value && event.value.trim()) {
         actions.push({ kind: 'type+enter', ...targetOf(event), value: event.value });
+        lastSubmit = { key, url: event.url, value: event.value };
       }
       continue;
     }
 
     if (event.type === 'click') {
+      // The implicit submit click a form fires after typing + Enter is already
+      // covered by the type+enter action; replaying it would re-click the button.
+      const previous = actions[actions.length - 1];
+      if (
+        lastSubmit &&
+        lastSubmit.url === event.url &&
+        previous?.kind === 'type+enter' &&
+        (event.role === 'button' || event.inputType === 'submit')
+      ) {
+        lastSubmit = null;
+        continue;
+      }
+      lastSubmit = null;
       if (FOCUS_ROLES.has(event.role ?? '')) continue;
       flushPending();
       actions.push({
@@ -127,6 +149,13 @@ export interface CompileContext {
 
 export type StepInferer = (actions: Action[], context: CompileContext) => Promise<CompileResult>;
 
+const REPEAT_INTENT = /\b(each|every|all)\b/i;
+
+/** True when the goal/narration asks for the action to apply to every item. */
+export function hasRepeatIntent(context: CompileContext): boolean {
+  return REPEAT_INTENT.test([context.title, context.narration].filter(Boolean).join(' '));
+}
+
 /** Plain-language text for an action, used by the offline fallback. */
 export function describeAction(action: Action): string {
   const label = action.name?.trim() || action.css || action.role || 'element';
@@ -145,7 +174,7 @@ export function describeAction(action: Action): string {
 }
 
 /** Deterministic step list for when no LLM key is configured or the call fails. */
-export function deterministicSteps(actions: Action[]): CompileResult {
+export function deterministicSteps(actions: Action[], context: CompileContext = {}): CompileResult {
   const steps: CompiledStep[] = actions.map((action, index) => ({
     n: index + 1,
     text: describeAction(action),
@@ -157,6 +186,14 @@ export function deterministicSteps(actions: Action[]): CompileResult {
     dataTest: action.dataTest ?? null,
     value: action.value,
   }));
+
+  // Without an LLM, the goal/narration is the only repeat signal we have. Mark the
+  // last actionable step so "download each PDF" still iterates offline.
+  if (hasRepeatIntent(context)) {
+    const target = [...steps].reverse().find((step) => step.action !== 'goto');
+    if (target) target.loop = { each: true };
+  }
+
   return { title: 'Recorded task', summary: `${steps.length} steps`, steps };
 }
 

@@ -1,5 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { deterministicSteps, describeAction, type CompileContext, type StepInferer } from './compiler';
+import {
+  deterministicSteps,
+  describeAction,
+  hasRepeatIntent,
+  type CompileContext,
+  type StepInferer,
+} from './compiler';
 import type { Action, CompileResult, CompiledStep, ParamMode } from './types';
 
 const MODEL = process.env.LOOP_COMPILER_MODEL ?? 'claude-sonnet-4-5';
@@ -25,6 +31,10 @@ Rules:
 - Mark sign-in-only steps (entering credentials, clicking Sign in) that exist purely
   to authenticate — not the task itself — with skipIfAuthenticated: true, so a saved
   login can skip them on later runs.
+- If the action is meant to run for every item on the page (the goal says "each",
+  "every", or "all"), set repeatForEach: true on that step so replay iterates the
+  list. Set it only on the repeated action itself, not on the filter/navigation
+  steps around it.
 - Keep title short (3-6 words). Keep summary to one sentence.`;
 
 const TOOL = {
@@ -43,6 +53,7 @@ const TOOL = {
             actionIndex: { type: 'number' as const },
             text: { type: 'string' as const },
             skipIfAuthenticated: { type: 'boolean' as const },
+            repeatForEach: { type: 'boolean' as const },
             param: {
               type: 'object' as const,
               properties: {
@@ -90,11 +101,12 @@ interface RawStep {
   actionIndex?: number;
   text?: string;
   skipIfAuthenticated?: boolean;
+  repeatForEach?: boolean;
   param?: { name?: string; mode?: string; value?: string };
 }
 
 /** Keep the LLM's language and parameter guesses, but bind locators to the actions. */
-function coerce(raw: unknown, actions: Action[]): CompileResult {
+function coerce(raw: unknown, actions: Action[], context: CompileContext = {}): CompileResult {
   const data = raw as { title?: unknown; summary?: unknown; steps?: unknown };
   const rawSteps: RawStep[] = Array.isArray(data.steps) ? data.steps : [];
 
@@ -112,6 +124,8 @@ function coerce(raw: unknown, actions: Action[]): CompileResult {
             value: rawStep.param.value ?? action.value,
           }
         : undefined;
+    const repeat =
+      rawStep.repeatForEach === true || (hasRepeatIntent(context) && action === actions[actions.length - 1]);
     steps.push({
       n: steps.length + 1,
       text: rawStep.text?.trim() || describeAction(action),
@@ -124,10 +138,11 @@ function coerce(raw: unknown, actions: Action[]): CompileResult {
       value: action.value,
       skipIfAuthenticated: rawStep.skipIfAuthenticated === true || undefined,
       param,
+      loop: repeat && action.kind !== 'goto' ? { each: true } : undefined,
     });
   }
 
-  if (steps.length === 0) return deterministicSteps(actions);
+  if (steps.length === 0) return deterministicSteps(actions, context);
   return {
     title: typeof data.title === 'string' && data.title.trim() ? data.title : 'Recorded task',
     summary:
@@ -141,7 +156,7 @@ function coerce(raw: unknown, actions: Action[]): CompileResult {
 /** LLM-backed inferer; silently degrades to deterministic steps without a key. */
 export function anthropicInferer(): StepInferer {
   const apiKey = process.env.CLAUDE_KEY;
-  if (!apiKey) return async (actions) => deterministicSteps(actions);
+  if (!apiKey) return async (actions, context) => deterministicSteps(actions, context);
   const client = new Anthropic({ apiKey });
 
   return async (actions, context) => {
@@ -155,10 +170,10 @@ export function anthropicInferer(): StepInferer {
         tool_choice: { type: 'tool', name: TOOL.name },
       });
       const toolUse = message.content.find((block) => block.type === 'tool_use');
-      if (!toolUse || toolUse.type !== 'tool_use') return deterministicSteps(actions);
-      return coerce(toolUse.input, actions);
+      if (!toolUse || toolUse.type !== 'tool_use') return deterministicSteps(actions, context);
+      return coerce(toolUse.input, actions, context);
     } catch {
-      return deterministicSteps(actions);
+      return deterministicSteps(actions, context);
     }
   };
 }

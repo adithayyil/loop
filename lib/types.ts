@@ -38,6 +38,13 @@ export interface StepParam {
   value?: string;
 }
 
+/** Repeat a step once per matching item on the page ("download each invoice"). */
+export interface LoopSpec {
+  each: true;
+  /** Safety cap on iterations. Defaults to 25 at replay time. */
+  max?: number;
+}
+
 export interface CompiledStep {
   n: number;
   text: string;
@@ -47,16 +54,27 @@ export interface CompiledStep {
   role?: string | null;
   name?: string | null;
   dataTest?: string | null;
+  /** Zero-based match index, set by self-healing when several elements share a name. */
+  nth?: number;
   value?: string;
   /** Sign-in-only step; safe to skip when a saved profile is already authenticated. */
   skipIfAuthenticated?: boolean;
   param?: StepParam;
+  /** When set, replay runs this step for every matching item. */
+  loop?: LoopSpec;
 }
 
 export interface CompileResult {
   title: string;
   summary: string;
   steps: CompiledStep[];
+}
+
+/** A transcribed span of voice narration, with times relative to recording start. */
+export interface NarrationSegment {
+  start: number;
+  end: number;
+  text: string;
 }
 
 export interface Skill {
@@ -79,6 +97,10 @@ export interface Recording {
   events: RecordedEvent[];
   profileId?: string | null;
   hlsUrl?: string | null;
+  /** Full voice-narration transcript, when the user narrated the recording. */
+  narration?: string;
+  /** Timestamped narration spans (seconds from recording start). */
+  narrationSegments?: NarrationSegment[];
   startedAt: number;
   stoppedAt?: number;
   result?: CompileResult;

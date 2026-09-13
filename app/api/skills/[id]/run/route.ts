@@ -7,6 +7,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
+/** How long a failed run keeps its session alive so "Needs you" can be taken over. */
+const RETAIN_FAILED_MS = Number(process.env.LOOP_FAILED_SESSION_MS) || 5 * 60 * 1000;
+
 /**
  * Kick off a run in the background and return immediately so the client can
  * embed the Steel live viewer and poll `/api/runs/[id]` for state.
@@ -29,6 +32,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   void runSkill(skill, {
     params: body.params ?? {},
     releaseDelayMs: 4000,
+    retainOnFailureMs: RETAIN_FAILED_MS,
     cacheKey: record.id,
     onSession: (sessionId, debugUrl) => {
       record.sessionId = sessionId;
@@ -38,6 +42,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .then((result) => {
       record.status = result.status;
       record.result = result;
+      // self-healing mutates the step locators in place; persist the repaired skill.
+      // Vision heals are runtime-only (coordinates aren't a durable locator), so they
+      // don't trigger a write.
+      if (result.healed.some((heal) => heal.via !== 'vision')) store.skills.set(id, skill);
     })
     .catch((error: unknown) => {
       record.status = 'failed';
