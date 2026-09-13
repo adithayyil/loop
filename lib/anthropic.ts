@@ -29,7 +29,7 @@ Rules:
   URL, or the element text. Always set its current value.
 - If a value looks like a credential or an obviously stable setting, prefer "fixed".
 - Mark sign-in-only steps (entering credentials, clicking Sign in) that exist purely
-  to authenticate — not the task itself — with skipIfAuthenticated: true, so a saved
+  to authenticate (not the task itself) with skipIfAuthenticated: true, so a saved
   login can skip them on later runs.
 - If the action is meant to run for every item on the page (the goal says "each",
   "every", or "all"), set repeatForEach: true on that step so replay iterates the

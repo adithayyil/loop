@@ -1,7 +1,7 @@
 // Product E2E: record -> compile -> save -> run -> verify, over the app's own HTTP API
 // (the same calls the UI makes). Two scenarios:
-//   1. TodoMVC — structural replay (nav, add, toggle, filter).
-//   2. Wikipedia — parameterized input replay; the typed value must show up in the
+//   1. TodoMVC: structural replay (nav, add, toggle, filter).
+//   2. Wikipedia: parameterized input replay; the typed value must show up in the
 //      replayed final URL, proving fill/Enter + param substitution actually happened.
 //
 // Run: node --experimental-strip-types spike/product-e2e.mjs
@@ -16,7 +16,7 @@ let total = 0;
 const check = (name, ok, detail = '') => {
   total += 1;
   if (ok) passed += 1;
-  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? ` — ${detail}` : ''}`);
+  console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `: ${detail}` : ''}`);
 };
 
 async function api(path, init) {

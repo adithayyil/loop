@@ -95,7 +95,7 @@ async function seed({ name, phrase, target, human, runParams, assertReplay }) {
     return { name, skillId, kept: true };
   }
   await api(`/api/skills/${skillId}`, { method: 'DELETE' });
-  console.log(`  DELETED (replay did not verify) — reason: ${result?.result?.error ?? 'assertion failed'}`);
+  console.log(`  DELETED (replay did not verify): reason ${result?.result?.error ?? 'assertion failed'}`);
   return { name, kept: false };
 }
 

@@ -1,5 +1,5 @@
 {
-  description = "loop — \"Show it once, it does it forever.\" Record a browser task once and replay it in a Steel cloud session.";
+  description = "loop: \"Show it once, it does it forever.\" Record a browser task once and replay it in a Steel cloud session.";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -27,7 +27,7 @@
             packages = [
               pkgs.nodejs_24
               pkgs.git
-              # Expose the local demo app so the Steel cloud browser can reach it:
+              # Expose the local app to the Steel cloud browser when needed:
               #   cloudflared tunnel --url http://localhost:3000
               pkgs.cloudflared
             ];
@@ -40,7 +40,7 @@
               # local browser download needed at install time.
               export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-              echo "loop dev shell — node $(node --version), npm $(npm --version)"
+              echo "loop dev shell: node $(node --version), npm $(npm --version)"
             '';
           };
         }

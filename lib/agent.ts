@@ -46,7 +46,7 @@ Rules:
 - After typing into a field, you may pass submit:true to press Enter.
 - Work step by step; do not skip ahead. If a page is loading, use wait.
 - If the page already contains what the goal asks for, call "done" immediately with the
-  answer in the summary — do not keep scrolling. Only scroll when the target is clearly
+  answer in the summary. Do not keep scrolling. Only scroll when the target is clearly
   below the fold, and at most once or twice.
 - Never repeat the same action more than twice in a row; if it isn't working, try a
   different approach or call "fail".
@@ -280,7 +280,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
     await page.goto(options.startUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 });
     if (await challengeBlocks(page)) {
       result.error = CHALLENGE_MESSAGE;
-      emit({ n: 1, action: 'needs-you', detail: 'CAPTCHA challenge detected — stopping' });
+      emit({ n: 1, action: 'needs-you', detail: 'CAPTCHA challenge detected, stopping' });
       return result;
     }
     const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_KEY ?? '' });
@@ -298,7 +298,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
         break;
       }
       if (Date.now() > deadline) {
-        result.error = 'Timed out before finishing — try a more specific goal.';
+        result.error = 'Timed out before finishing; try a more specific goal.';
         emit({ n: steps.length + 1, action: 'needs-you', detail: 'Time limit reached' });
         break;
       }
@@ -343,7 +343,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       lastSignature = signature;
       if (repeats >= 2) {
         result.error = `The agent got stuck repeating "${toolUse.name}" without progress on this page.`;
-        emit({ n: steps.length + 1, action: 'needs-you', detail: 'Stuck repeating an action — stopping' });
+        emit({ n: steps.length + 1, action: 'needs-you', detail: 'Stuck repeating an action, stopping' });
         break;
       }
 
@@ -359,7 +359,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
 
       if (await challengeBlocks(page)) {
         result.error = CHALLENGE_MESSAGE;
-        emit({ n: steps.length + 1, action: 'needs-you', detail: 'CAPTCHA challenge detected — stopping' });
+        emit({ n: steps.length + 1, action: 'needs-you', detail: 'CAPTCHA challenge detected, stopping' });
         break;
       }
 

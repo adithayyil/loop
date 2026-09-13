@@ -1,7 +1,7 @@
 # Architecture
 
-**loop** records a browser task once — either by doing it in a cloud browser, or by describing the
-goal to an agent — and turns the captured DOM events (plus optional voice narration) into a step
+**loop** records a browser task once, either by doing it in a cloud browser or by describing the
+goal to an agent, and turns the captured DOM events (plus optional voice narration) into a step
 list that replays deterministically in a fresh Steel cloud browser session.
 
 This document describes the system: the pipeline in §3, the app surfaces in §4, and what is
@@ -71,7 +71,7 @@ intentionally out of scope in §15.
    the compiled steps executed via a locator chain, a live Steel viewer embedded, and downloaded
    files cached and listed at the end.
 
-`/new` offers the two capture modes — `agent` (goal-driven, see §7) and `record` (manual) — and
+`/new` offers the two capture modes, `agent` (goal-driven, see §7) and `record` (manual), and
 both feed the same compile → review → skill path. `/` lists saved loops, `/runs` lists this
 session's runs.
 
@@ -340,7 +340,7 @@ record→replay flows), and `release-all.mjs` / `stealth-check.mjs` (session hyg
   rather than failing the recording.
 - **Main-frame recorder**: iframes, closed shadow DOM, file uploads, and drag-drop are not captured.
 - **Selector fragility**: the locator chain helps, and ARIA self-healing repairs a broken locator
-  (writing it back to the skill), but a DOM repair is not always possible — canvas/visual-only
+  (writing it back to the skill), but a DOM repair is not always possible; canvas/visual-only
   targets fall back to a runtime coordinate click, not a durable repair.
 - **Loops are heuristic**: `loop: { each: true }` derives the repeated list at runtime from the
   recorded target's nearest structural ancestors. It can misfire on ambiguous layouts and is capped

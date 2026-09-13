@@ -82,7 +82,7 @@ export default function RunsPage() {
                     {new Date(run.startedAt).toLocaleTimeString()}
                   </TableCell>
                   <TableCell className="hidden text-muted-foreground tabular md:table-cell">
-                    {run.result ? `${run.result.stepsRun}/${run.result.totalSteps}` : '—'}
+                    {run.result ? `${run.result.stepsRun}/${run.result.totalSteps}` : '-'}
                   </TableCell>
                 </TableRow>
               ))}

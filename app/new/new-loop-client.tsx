@@ -67,7 +67,7 @@ function ModeChooser({ onPick }: { onPick: (mode: Mode) => void }) {
       <header className="space-y-1.5">
         <h1 className="text-2xl font-semibold tracking-tight">New loop</h1>
         <p className="text-sm text-muted-foreground">
-          Show loop the task once — by doing it, or by describing it to the agent.
+          Show loop the task once, by doing it or by describing it to the agent.
         </p>
       </header>
       <div className="grid gap-4 sm:grid-cols-2">
@@ -315,7 +315,7 @@ function RecordFlow({ onDone }: { onDone: (recordingId: string) => void }) {
 
       <p className="text-sm text-muted-foreground">
         {narrating
-          ? 'Say why you do each step — it gets transcribed to guide the steps.'
+          ? 'Say why you do each step; it gets transcribed to guide the steps.'
           : 'Do the task normally. Add voice narration if the “why” matters.'}
       </p>
 

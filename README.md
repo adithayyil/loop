@@ -2,9 +2,9 @@
 
 **Show it once. It does it forever.**
 
-loop records a browser task once — by doing it in a cloud browser, or by describing it to an
-agent — and turns it into an editable, plain-language step list that replays on demand in a
-fresh [Steel](https://steel.dev) session.
+loop records a browser task once, by doing it in a cloud browser or by describing it to an agent,
+and turns it into an editable, plain-language step list that replays on demand in a fresh
+[Steel](https://steel.dev) session.
 
 ![The review screen](docs/screenshot.png)
 
@@ -19,9 +19,9 @@ fresh [Steel](https://steel.dev) session.
 ## Features
 
 - Record it yourself, or describe the goal and let the agent do it
-- Editable steps with parameter pills — *changes each time* vs *always the same*
+- Editable steps with parameter pills: *changes each time* vs *always the same*
 - Self-healing replay: ARIA re-resolution, then a vision click for canvas/visual-only targets
-- Multi-item loops — "download each invoice"
+- Multi-item loops: "download each invoice"
 - Voice narration, transcribed during recording to guide the steps
 - Cloud sessions, managed proxies, and captcha solving via Steel
 - Saved logins, downloads captured to the run, and guardrailed agents

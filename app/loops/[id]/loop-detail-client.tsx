@@ -199,7 +199,7 @@ export function LoopDetail({
             <CardDescription>
               {variableParams.length > 0
                 ? 'Fill in the values that change each run.'
-                : 'No inputs needed — press Run now.'}
+                : 'No inputs needed, press Run now.'}
             </CardDescription>
           </CardHeader>
           {variableParams.length > 0 ? (

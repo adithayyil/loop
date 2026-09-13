@@ -98,7 +98,7 @@ const TOOL = {
 
 /**
  * Ask Claude to re-resolve a step against the live page. Returns null when there is
- * no key, the model can't find the element, or the call fails — replay then rethrows
+ * no key, the model can't find the element, or the call fails, replay then rethrows
  * its original error, so healing is always best-effort.
  */
 export async function healStep(
