@@ -15,6 +15,7 @@ export default async function ReviewPage({ params }: { params: Promise<{ id: str
       initial={recording.result}
       events={recording.events}
       profileId={recording.profileId ?? null}
+      narration={recording.narration ?? null}
     />
   );
 }

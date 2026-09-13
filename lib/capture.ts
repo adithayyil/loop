@@ -5,7 +5,7 @@ import { chromium, type Browser, type Page } from 'playwright-core';
 import Steel from 'steel-sdk';
 import { RECORDER_SCRIPT } from './recorder';
 import { createSession, profileForSession, steelApiKey, steelClient } from './steel';
-import type { RecordedEvent, Recording } from './types';
+import type { NarrationSegment, RecordedEvent, Recording } from './types';
 
 const RECORDINGS_DIR = path.join(process.cwd(), 'recordings');
 
@@ -15,6 +15,8 @@ interface ActiveCapture {
   debugUrl: string;
   startedAt: number;
   events: RecordedEvent[];
+  narration?: string;
+  narrationSegments?: NarrationSegment[];
   browser: Browser;
   page: Page;
   client: Steel;
@@ -117,6 +119,14 @@ export function getActiveRecording(id: string): ActiveCapture | undefined {
   return active.get(id);
 }
 
+/** Attach a transcribed narration track to a live recording (before stop). */
+export function setNarration(id: string, narration: string, segments: NarrationSegment[]): void {
+  const capture = active.get(id);
+  if (!capture) throw new Error(`No active recording "${id}"`);
+  capture.narration = narration;
+  capture.narrationSegments = segments;
+}
+
 /** Detach the recorder, collect the profile, and release the Steel session. */
 export async function stopRecording(id: string): Promise<Recording> {
   const capture = active.get(id);
@@ -150,6 +160,8 @@ export async function stopRecording(id: string): Promise<Recording> {
     debugUrl: capture.debugUrl,
     status: 'stopped',
     events: capture.events,
+    narration: capture.narration,
+    narrationSegments: capture.narrationSegments,
     profileId,
     hlsUrl: `https://api.steel.dev/v1/sessions/${capture.sessionId}/hls`,
     startedAt: capture.startedAt,
