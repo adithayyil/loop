@@ -5,4 +5,4 @@ node_modules/
 *.db
 *.db-journal
 *.tsbuildinfo
-recordings/
+/recordings/
