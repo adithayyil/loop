@@ -5,11 +5,17 @@ interface Stealth {
   humanizeInteractions?: boolean;
 }
 
+interface Geolocation {
+  geolocation: { country: string };
+}
+
 interface CreateBody {
   persistProfile?: boolean;
   debugConfig?: { interactive?: boolean };
   solveCaptcha?: boolean;
   stealthConfig?: Stealth;
+  useProxy?: boolean | Geolocation;
+  proxyUrl?: string;
   timeout?: number;
   profileId?: string;
 }
@@ -17,6 +23,11 @@ interface CreateBody {
 function flag(name: string): boolean {
   const value = process.env[name]?.toLowerCase();
   return value === '1' || value === 'true';
+}
+
+/** True when captcha auto-solving is enabled (Steel requires a paid balance). */
+export function captchaSolvingEnabled(): boolean {
+  return flag('LOOP_SOLVE_CAPTCHA');
 }
 
 export function steelApiKey(): string {
@@ -30,24 +41,36 @@ export function steelClient(): Steel {
 }
 
 /**
- * Session options shared by record and replay. Captcha/stealth behavior is opt-in
- * via env (solving adds latency and cost, and Steel gates it behind a paid balance):
- *   LOOP_SOLVE_CAPTCHA=1  -> auto-solve detected captchas
- *   LOOP_HUMANIZE=1       -> human-like mouse movement (helps with bot detection)
+ * Session options shared by record and replay. Captcha/stealth/proxy behavior is
+ * opt-in via env (solving adds latency and cost, and Steel gates it behind a paid
+ * balance):
+ *   LOOP_SOLVE_CAPTCHA=1   -> auto-solve detected captchas
+ *   LOOP_HUMANIZE=1        -> human-like mouse movement (helps with bot detection)
+ *   LOOP_USE_PROXY=1       -> route through a Steel managed proxy
+ *   LOOP_PROXY_COUNTRY=US  -> pin the managed proxy's geolocation
+ *   LOOP_PROXY_URL=...     -> custom proxy URL; overrides LOOP_USE_PROXY
  */
 export function sessionConfig(): CreateBody {
   const solveCaptcha = flag('LOOP_SOLVE_CAPTCHA');
   const humanize = flag('LOOP_HUMANIZE');
+  const useProxy = flag('LOOP_USE_PROXY');
+  const proxyUrl = process.env.LOOP_PROXY_URL?.trim();
+  const proxyCountry = process.env.LOOP_PROXY_COUNTRY?.trim().toUpperCase();
 
   const stealthConfig: Stealth = {};
   if (solveCaptcha) stealthConfig.autoCaptchaSolving = true;
   if (humanize) stealthConfig.humanizeInteractions = true;
+
+  const proxy: Pick<CreateBody, 'useProxy' | 'proxyUrl'> = {};
+  if (proxyUrl) proxy.proxyUrl = proxyUrl;
+  else if (useProxy) proxy.useProxy = proxyCountry ? { geolocation: { country: proxyCountry } } : true;
 
   return {
     persistProfile: true,
     debugConfig: { interactive: true },
     solveCaptcha: solveCaptcha || undefined,
     stealthConfig: Object.keys(stealthConfig).length > 0 ? stealthConfig : undefined,
+    ...proxy,
   };
 }
 

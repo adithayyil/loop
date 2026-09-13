@@ -3,7 +3,7 @@ import path from 'node:path';
 import Anthropic from '@anthropic-ai/sdk';
 import { chromium, type Page } from 'playwright-core';
 import { RECORDER_SCRIPT } from './recorder';
-import { createSession, steelApiKey, steelClient } from './steel';
+import { captchaSolvingEnabled, createSession, steelApiKey, steelClient } from './steel';
 import type { RecordedEvent } from './types';
 
 const MODEL = process.env.LOOP_AGENT_MODEL ?? process.env.LOOP_COMPILER_MODEL ?? 'claude-sonnet-4-5';
@@ -166,6 +166,25 @@ async function detectChallenge(page: Page): Promise<boolean> {
   }
 }
 
+const CHALLENGE_MESSAGE =
+  'The page is behind a CAPTCHA / bot challenge. Solve it in the live view, or set LOOP_SOLVE_CAPTCHA=1 with a paid Steel balance to auto-solve.';
+
+/**
+ * Whether a challenge should block the run. With auto-solving enabled, Steel clears
+ * the challenge inside the session, so we give it a bounded window to finish and only
+ * give up if the page is still challenged afterwards.
+ */
+async function challengeBlocks(page: Page): Promise<boolean> {
+  if (!(await detectChallenge(page))) return false;
+  if (!captchaSolvingEnabled()) return true;
+  const deadline = Date.now() + 30_000;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(2000);
+    if (!(await detectChallenge(page))) return false;
+  }
+  return true;
+}
+
 function locatorFor(page: Page, input: Record<string, unknown>) {
   const nth = typeof input.nth === 'number' ? input.nth : 0;
   if (typeof input.role === 'string' && typeof input.name === 'string') {
@@ -259,9 +278,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
 
   try {
     await page.goto(options.startUrl, { waitUntil: 'domcontentloaded', timeout: 20_000 });
-    if (await detectChallenge(page)) {
-      result.error =
-        'The start URL is behind a CAPTCHA / bot challenge. Solve it in the live view, or set LOOP_SOLVE_CAPTCHA=1 with a paid Steel balance to auto-solve.';
+    if (await challengeBlocks(page)) {
+      result.error = CHALLENGE_MESSAGE;
       emit({ n: 1, action: 'needs-you', detail: 'CAPTCHA challenge detected — stopping' });
       return result;
     }
@@ -339,9 +357,8 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       emit({ n: steps.length + 1, action: toolUse.name, detail, result: outcome });
       await page.waitForTimeout(300);
 
-      if (await detectChallenge(page)) {
-        result.error =
-          'Hit a CAPTCHA / bot challenge. Solve it in the live view, or set LOOP_SOLVE_CAPTCHA=1 with a paid Steel balance to auto-solve.';
+      if (await challengeBlocks(page)) {
+        result.error = CHALLENGE_MESSAGE;
         emit({ n: steps.length + 1, action: 'needs-you', detail: 'CAPTCHA challenge detected — stopping' });
         break;
       }
