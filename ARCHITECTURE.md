@@ -17,8 +17,7 @@ intentionally out of scope in §15.
   not for replay.
 - **The review screen is the trust checkpoint.** Compiled steps are edited in place; original raw
   events stay available.
-- **Nothing in the pipeline is site-specific.** Any public site can be recorded and replayed;
-  the earlier self-hosted invoice demo app was removed once the round trip was proven.
+- **Nothing in the pipeline is site-specific.** Any public site can be recorded and replayed.
 
 ---
 
@@ -64,9 +63,9 @@ intentionally out of scope in §15.
    with parameter guesses. Locators are bound back to the recorded actions, never invented. When
    narration was captured it is passed in as `CompileContext.narration` and steers step wording,
    parameter intent, and loop detection.
-3. **Review.** `/review/[id]` (`app/review/[id]/ReviewClient.tsx`) lets the user edit step text,
-   merge/delete steps, and mark each value as **changes each time** (a parameter prompted at run) or
-   **always the same**. The raw event log is viewable.
+3. **Review.** `/review/[id]` (`app/review/[id]/ReviewClient.tsx`) lets the user edit or delete steps
+   and mark each value as **changes each time** (a parameter prompted at run) or **always the same**.
+   The raw event log is viewable.
 4. **Save.** The reviewed steps plus a name and trigger become a `Skill` row in SQLite.
 5. **Run.** `/loops/[id]` starts a background run: a fresh Steel session with the saved profile,
    the compiled steps executed via a locator chain, a live Steel viewer embedded, and downloaded
@@ -89,7 +88,7 @@ session's runs.
 | `capture.ts` | `startRecording` / `stopRecording` / `navigateRecording`; owns the active-capture registry (Steel session + CDP browser + page + NDJSON stream). |
 | `steel.ts` | `steelClient`, `sessionConfig`, `createSession` (with captcha/stealth fallback), `profileForSession`. |
 | `compiler.ts` | Pure `normalize(events) -> Action[]`, `describeAction`, `deterministicSteps`, `isChallengeEvent`; `compile(events, inferer, ctx)`. |
-| `transcribe.ts` | OpenAI-compatible speech API (Groq or OpenAI) for narration; pure `guardSegments` no-speech guard + `joinNarration`. |
+| `transcribe.ts` | Any OpenAI-compatible speech API (Groq / OpenAI / OpenRouter) for narration; pure `guardSegments` no-speech guard + `joinNarration`. |
 | `anthropic.ts` | `anthropicInferer()`: Claude tool-call that emits steps + parameter guesses; degrades to `deterministicSteps` without a key or on error. |
 | `agent.ts` | `runAgent()`: goal-driven tool loop using `ariaSnapshot`, executes one action per turn. |
 | `agent-runs.ts` | In-flight agent run records + abort controllers (`globalThis`-backed). |
@@ -122,7 +121,7 @@ session's runs.
 |---|---|
 | `POST /api/recordings` | Open a browser session (blank unless `startUrl` is given); returns `{ id, sessionId, debugUrl }`. |
 | `POST /api/recordings/[id]/navigate` | Navigate an open session from the in-app address bar. |
-| `POST /api/recordings/[id]/narration` | Transcribe an uploaded audio blob (Whisper) and attach it to the live capture. |
+| `POST /api/recordings/[id]/narration` | Transcribe an uploaded audio blob (speech API) and attach it to the live capture. |
 | `POST /api/recordings/[id]/stop` | Release the session, persist the `Recording`, compile, return `{ recording, result }`. |
 | `GET /api/recordings/[id]` | Fetch a stored recording + compiled result. |
 | `POST /api/compile` | Compile raw `events` or a named `fixture` offline; persists a recording. |
@@ -151,9 +150,10 @@ All route handlers run on the Node runtime (`export const runtime = 'nodejs'`).
   Replay sessions are created with that `profileId`, so replays arrive already signed in.
 - **Login steps.** The compiler tags sign-in-only steps with `skipIfAuthenticated`; the runner
   skips them when a `profileId` is present, so a saved login is reused instead of re-entered.
-- **Release.** Sessions are released in a `finally` on every path (capture stop, agent completion,
-  replay completion). The runner keeps the session alive ~4s after completion so the live viewer
-  shows the end state.
+- **Release.** Sessions are released in a `finally` on capture stop, agent completion, and replay
+  completion; a successful run waits ~4s first so the live viewer shows the end state. A failed run
+  instead keeps its session alive for `LOOP_FAILED_SESSION_MS` (default 5 min) so `Needs you` can be
+  taken over, releasing on a detached timer.
 
 ---
 
@@ -174,8 +174,9 @@ Guardrails:
 
 - Default `maxSteps` 15 and a 120s wall-clock budget.
 - **Stuck detection**: the same action three times in a row stops the run.
-- **Challenge detection** (`detectChallenge`): CAPTCHA/bot challenge markers stop the run with a
-  clear message rather than flailing.
+- **Challenge detection** (`detectChallenge`): CAPTCHA/bot challenge markers pause the run while
+  Steel auto-solves (up to 30s when `LOOP_SOLVE_CAPTCHA=1`), then stop with a clear message rather
+  than flailing.
 - **Cancellation**: an `AbortController` per run; `DELETE /api/agent/[id]` aborts and releases.
 - A system prompt that forbids payments/deletions/account changes and tells the agent to answer
   from the visible page instead of scrolling indefinitely.
@@ -191,6 +192,8 @@ Guardrails:
   so form submissions fill fields first.
 - Emits `type+enter` for Enter, `click` (with a `toggle` note for checkboxes), and `goto` on
   navigation changes.
+- Absorbs the browser's trailing `change` and implicit submit `click` after an Enter, so a search
+  compiles to one `type+enter` rather than `type+enter` + `fill` + `click`.
 - Drops bot-challenge events and challenge URLs (`isChallengeEvent`).
 
 The inferer (`anthropicInferer`) then produces `{ title, summary, steps[] }` with a forced tool
@@ -226,7 +229,9 @@ it falls back to `deterministicSteps`, so the app still works offline.
   `recordings/downloads/<runId>/` before releasing** (Steel drops session files on release).
 
 The run is backgrounded: `POST /api/skills/[id]/run` returns a `runId` immediately and the client
-polls `/api/runs/[id]`, embedding the Steel player while `running`.
+polls `/api/runs/[id]`, embedding the Steel player while `running`. On failure the session is kept
+for `LOOP_FAILED_SESSION_MS` so the same view can be taken over; a stale `runId` resolves to a
+`runMissing` state rather than spinning.
 
 ---
 
@@ -293,6 +298,8 @@ Environment (server-side only; see `.env.example`):
 | `LOOP_PROXY_URL` | Custom proxy URL; overrides `LOOP_USE_PROXY`. |
 | `LOOP_COMPILER_MODEL` / `LOOP_AGENT_MODEL` | Optional model overrides. |
 | `LOOP_VISION_MODEL` | Optional vision-model override (defaults to the compiler model). |
+| `LOOP_FAILED_SESSION_MS` | How long a failed run keeps its session open for takeover (default 300000). |
+| `LOOP_DEMO_URL` | Optional default start URL when a recording opens with none. |
 | `LOOP_WHISPER_KEY` / `LOOP_WHISPER_BASE_URL` / `LOOP_WHISPER_MODEL` | Optional overrides for any OpenAI-compatible speech endpoint. |
 
 ---
@@ -303,7 +310,7 @@ Environment (server-side only; see `.env.example`):
 nix develop          # node 24 + git + cloudflared, GIT_CONFIG_NOSYSTEM=1
 npm install
 npm run dev          # http://localhost:3000  (the workspace)
-npm test             # compiler + vision fixture tests (node:test)
+npm test             # unit tests: compiler, healing, narration, vision (node:test)
 npm run typecheck    # tsc --noEmit
 npm run build        # next build
 npm run test:e2e     # browser E2E against a real Chromium (starts the app if needed)
