@@ -322,9 +322,10 @@ screenshots to `recordings/e2e/` for visual inspection. It builds and starts the
 automatically, and finds the nixpkgs Chromium on NixOS (`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`
 overrides).
 
-`spike/` holds the de-risking scripts (the proven record→replay round trip, live E2E harnesses,
-the HLS backup-video capture, `vision-locate.mjs`, `product-e2e.mjs`, `seed-demo.mjs`, session
-cleanup). `recordings/` holds runtime artifacts and is gitignored.
+`spike/` holds the de-risking scripts: `roundtrip.mjs` (the proven record→replay round trip),
+`vision-locate.mjs` (vision-grounding), `product-e2e.mjs` and `seed-demo.mjs` (real-site
+record→replay flows), and `release-all.mjs` / `stealth-check.mjs` (session hygiene).
+`recordings/` holds runtime artifacts and is gitignored.
 
 ---
 
