@@ -1,13 +1,16 @@
 import { store } from '@/lib/store';
-import ChatClient from './chat/ChatClient';
+import { LoopsHome } from './components/loops-home';
 
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
-  const defaultStartUrl = '';
-  const skills = store.skills
-    .values()
-    .map((skill) => ({ id: skill.id, name: skill.name, trigger: skill.trigger }));
+export default function LoopsPage() {
+  const loops = store.skills.values().map((skill) => ({
+    id: skill.id,
+    name: skill.name,
+    trigger: skill.trigger,
+    stepCount: skill.steps.length,
+    hasProfile: Boolean(skill.profileId),
+  }));
 
-  return <ChatClient defaultStartUrl={defaultStartUrl} initialSkills={skills} />;
+  return <LoopsHome loops={loops} />;
 }

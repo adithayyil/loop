@@ -1,8 +1,35 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  FileJson,
+  Info,
+  Layers,
+  Repeat2,
+  Save,
+  Trash2,
+} from 'lucide-react';
 import type { CompileResult, CompiledStep, RecordedEvent } from '@/lib/types';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 function slug(input: string): string {
   return input
@@ -16,51 +43,34 @@ function defaultParamName(step: CompiledStep): string {
   return slug(step.name || step.css || step.text) || `value_${step.n}`;
 }
 
-function InfoIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
-      <path d="M12 11v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-      <circle cx="12" cy="7.5" r="1.2" fill="currentColor" />
-    </svg>
-  );
-}
-
 export default function ReviewClient({
   recordingId,
   initial,
   events,
   profileId,
+  narration,
 }: {
   recordingId: string;
   initial: CompileResult;
   events: RecordedEvent[];
   profileId: string | null;
+  narration: string | null;
 }) {
+  const router = useRouter();
   const [steps, setSteps] = useState<CompiledStep[]>(initial.steps);
   const [name, setName] = useState(initial.title);
   const [triggerType, setTriggerType] = useState<'phrase' | 'schedule'>('phrase');
   const [phrase, setPhrase] = useState(slug(initial.title).replace(/_/g, ' '));
   const [schedule, setSchedule] = useState('0 9 * * 1');
-  const [menuFor, setMenuFor] = useState<number | null>(null);
-  const [showEvents, setShowEvents] = useState(false);
+  const [openPill, setOpenPill] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const variableCount = useMemo(
-    () => steps.filter((s) => s.param?.mode === 'variable').length,
+    () => steps.filter((step) => step.param?.mode === 'variable').length,
     [steps],
   );
-
-  useEffect(() => {
-    if (menuFor == null) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setMenuFor(null);
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [menuFor]);
 
   const updateStep = (index: number, patch: Partial<CompiledStep>) => {
     setSteps((prev) => prev.map((step, i) => (i === index ? { ...step, ...patch } : step)));
@@ -87,14 +97,12 @@ export default function ReviewClient({
     setSteps((prev) => prev.filter((_, i) => i !== index).map((step, i) => ({ ...step, n: i + 1 })));
   };
 
-  const mergeDown = (index: number) => {
-    setSteps((prev) => {
-      if (index >= prev.length - 1) return prev;
-      const merged = [...prev];
-      merged[index] = { ...merged[index], text: `${merged[index].text}; ${merged[index + 1].text}` };
-      merged.splice(index + 1, 1);
-      return merged.map((step, i) => ({ ...step, n: i + 1 }));
-    });
+  const toggleLoop = (index: number) => {
+    setSteps((prev) =>
+      prev.map((step, i) =>
+        i === index ? { ...step, loop: step.loop?.each ? undefined : { each: true } } : step,
+      ),
+    );
   };
 
   const save = async () => {
@@ -126,184 +134,282 @@ export default function ReviewClient({
   };
 
   return (
-    <main className="lp-page">
-      <div className="lp-wrap">
-        <div className="lp-head">
-          <p className="lp-kicker">Review · recording</p>
-          <Link href="/" className="lp-backlink">
-            ← Back to chat
+    <div className="mx-auto grid w-full max-w-6xl gap-8 p-6 md:p-10 lg:grid-cols-[1fr_20rem]">
+      <div className="min-w-0 space-y-6">
+        <div className="space-y-3">
+          <Link href="/" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+            <ArrowLeft />
+            Loops
           </Link>
+          <div>
+            <Label htmlFor="loop-name" className="text-xs text-muted-foreground">
+              Loop name
+            </Label>
+            <input
+              id="loop-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              className="w-full border-0 bg-transparent p-0 text-2xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground"
+            />
+          </div>
+          <p className="text-sm text-muted-foreground">{initial.summary}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant={variableCount > 0 ? 'default' : 'secondary'}>
+              {variableCount > 0
+                ? `${variableCount} value${variableCount === 1 ? '' : 's'} change each run`
+                : 'All values are fixed'}
+            </Badge>
+            <Badge variant="outline" className="gap-1.5">
+              <Info className="size-3" />
+              Click a value to make it change each run
+            </Badge>
+          </div>
         </div>
 
-        <input className="lp-title-input" value={name} onChange={(e) => setName(e.target.value)} />
-        <p className="lp-muted" style={{ marginTop: 2 }}>
-          {initial.summary}
-        </p>
-        <p style={{ marginTop: 12 }}>
-          {variableCount > 0 ? (
-            <span className="lp-badge">
-              {variableCount} value{variableCount === 1 ? '' : 's'} change each run
-            </span>
-          ) : (
-            <span className="lp-badge neutral">All values are fixed</span>
-          )}
-        </p>
+        {narration ? (
+          <Card className="border-primary/30 bg-primary/5 py-3">
+            <CardContent className="flex gap-3 text-sm">
+              <MicNote />
+              <p className="text-muted-foreground">
+                <span className="font-medium text-foreground">You said: </span>
+                “{narration}”
+              </p>
+            </CardContent>
+          </Card>
+        ) : null}
 
-        <p className="lp-helper">
-          <InfoIcon />
-          <span>
-            Click a value to choose whether it stays the same or changes each run. Edit any step
-            text directly.
-          </span>
-        </p>
-
-        <section className="lp-steps">
-          {steps.map((step, index) => {
-            const pillValue = step.value ?? step.param?.value;
-            const showPill = pillValue != null || step.param != null;
-            const variable = step.param?.mode === 'variable';
-            return (
-              <div key={index} className="lp-steprow">
-                <div className="lp-stepnum">{String(step.n).padStart(2, '0')}</div>
-                <div className="lp-stepbody">
-                  <input
-                    className="lp-steptext"
-                    value={step.text}
-                    onChange={(e) => updateStep(index, { text: e.target.value })}
-                  />
-                  {showPill && (
-                    <div className="lp-pill-wrap">
-                      <button
-                        type="button"
-                        className={`lp-pill${variable ? ' variable' : ''}`}
-                        onClick={() => setMenuFor(menuFor === index ? null : index)}
+        <Card className="py-0">
+          <CardHeader className="flex-row items-center justify-between border-b py-3">
+            <CardTitle className="text-sm">Steps</CardTitle>
+            <Sheet>
+              <SheetTrigger
+                render={
+                  <Button variant="ghost" size="sm">
+                    <FileJson />
+                    Raw events
+                  </Button>
+                }
+              />
+              <SheetContent side="right" className="w-full sm:max-w-lg">
+                <SheetHeader>
+                  <SheetTitle>Original events</SheetTitle>
+                  <SheetDescription>
+                    The unedited capture. Steps above are inferred from these.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="flex-1 overflow-auto px-4 pb-4">
+                  <pre className="rounded-lg bg-background p-3 font-mono text-[11px] leading-relaxed text-muted-foreground">
+                    {events.map((event) => JSON.stringify(event)).join('\n')}
+                  </pre>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </CardHeader>
+          <CardContent className="divide-y p-0">
+            {steps.map((step, index) => {
+              const pillValue = step.value ?? step.param?.value;
+              const showPill = pillValue != null || step.param != null;
+              const variable = step.param?.mode === 'variable';
+              return (
+                <div key={index} className="flex items-start gap-3 p-3">
+                  <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-secondary font-mono text-[11px] text-muted-foreground tabular">
+                    {step.n}
+                  </span>
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <input
+                      value={step.text}
+                      onChange={(event) => updateStep(index, { text: event.target.value })}
+                      className="w-full border-0 bg-transparent p-0 text-sm font-medium outline-none"
+                    />
+                    {showPill ? (
+                      <Popover open={openPill === index} onOpenChange={(open) => setOpenPill(open ? index : null)}>
+                        <PopoverTrigger
+                          render={
+                            <button
+                              type="button"
+                              className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                                variable
+                                  ? 'border-primary/40 bg-primary/10 text-primary'
+                                  : 'border-border bg-secondary/60 text-muted-foreground'
+                              }`}
+                            >
+                              <span className="font-mono">{pillValue}</span>
+                              <span className="opacity-70">{variable ? 'each run' : 'fixed'}</span>
+                            </button>
+                          }
+                        />
+                        <PopoverContent align="start" className="w-64 space-y-2 p-3">
+                          <p className="text-xs text-muted-foreground">
+                            Does this value change each run?
+                          </p>
+                          <Button
+                            variant={variable ? 'default' : 'outline'}
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => {
+                              setMode(index, 'variable');
+                              setOpenPill(null);
+                            }}
+                          >
+                            <Check className={variable ? '' : 'opacity-0'} />
+                            Changes each time
+                          </Button>
+                          <Button
+                            variant={!variable ? 'default' : 'outline'}
+                            size="sm"
+                            className="w-full justify-start"
+                            onClick={() => {
+                              setMode(index, 'fixed');
+                              setOpenPill(null);
+                            }}
+                          >
+                            <Check className={!variable ? '' : 'opacity-0'} />
+                            Always the same
+                          </Button>
+                          {variable && step.param ? (
+                            <div className="space-y-1.5 pt-1">
+                              <Label className="text-xs">Parameter name</Label>
+                              <Input
+                                value={step.param.name}
+                                onChange={(event) =>
+                                  updateStep(index, {
+                                    param: {
+                                      name: event.target.value,
+                                      mode: 'variable',
+                                      value: step.value,
+                                    },
+                                  })
+                                }
+                                className="h-7 font-mono text-xs"
+                              />
+                            </div>
+                          ) : null}
+                        </PopoverContent>
+                      </Popover>
+                    ) : null}
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {step.action !== 'goto' ? (
+                      <Button
+                        variant={step.loop?.each ? 'secondary' : 'ghost'}
+                        size="icon-sm"
+                        title="Repeat for every matching item"
+                        onClick={() => toggleLoop(index)}
                       >
-                        <strong>{pillValue}</strong>
-                        <span className="lp-pill-mode">{variable ? 'each run' : 'fixed'}</span>
-                      </button>
-                      {menuFor === index && (
-                        <>
-                          <div className="lp-menu-overlay" onClick={() => setMenuFor(null)} />
-                          <div className="lp-menu">
-                            {variable && step.param && (
-                              <div style={{ padding: '4px 6px 2px' }}>
-                                <label>parameter name</label>
-                                <input
-                                  className="lp-field mono"
-                                  value={step.param.name}
-                                  onChange={(e) =>
-                                    updateStep(index, {
-                                      param: { name: e.target.value, mode: 'variable', value: step.value },
-                                    })
-                                  }
-                                />
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMode(index, 'variable');
-                                setMenuFor(null);
-                              }}
-                            >
-                              <span>Changes each time</span>
-                              {variable && <span className="lp-check">✓</span>}
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMode(index, 'fixed');
-                                setMenuFor(null);
-                              }}
-                            >
-                              <span>Always the same</span>
-                              {!variable && step.param && <span className="lp-check">✓</span>}
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  )}
+                        <Repeat2 className={step.loop?.each ? 'text-primary' : ''} />
+                      </Button>
+                    ) : null}
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      title="Delete step"
+                      onClick={() => removeStep(index)}
+                    >
+                      <Trash2 />
+                    </Button>
+                  </div>
                 </div>
-                <div className="lp-stepactions">
-                  {index < steps.length - 1 && (
-                    <button type="button" className="lp-btn small ghost" onClick={() => mergeDown(index)}>
-                      merge
-                    </button>
-                  )}
-                  <button type="button" className="lp-btn small ghost danger" onClick={() => removeStep(index)} title="Delete step">
-                    delete
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </section>
-
-        <button type="button" className="lp-btn ghost" style={{ marginTop: 14 }} onClick={() => setShowEvents((v) => !v)}>
-          {showEvents ? 'Hide original events' : 'View original events'}
-        </button>
-        {showEvents && <pre className="lp-events">{events.map((e) => JSON.stringify(e)).join('\n')}</pre>}
-
-        <section className="lp-save">
-          <p className="lp-kicker">Save as loop</p>
-          <h2 style={{ fontSize: 17, fontWeight: 650, margin: '8px 0 0', letterSpacing: '-0.01em' }}>
-            Name it and set a trigger
-          </h2>
-          <p className="lp-muted" style={{ marginTop: 4, fontSize: 13 }}>
-            Run it on demand, or exactly like this every time.
-          </p>
-
-          {savedId ? (
-            <div className="lp-success">
-              <strong>Saved.</strong>
-              <Link href={`/run/${savedId}`} className="lp-btn primary">
-                Run it now →
-              </Link>
-              <Link href="/library" className="lp-btn ghost">
-                Go to library
-              </Link>
-            </div>
-          ) : (
-            <>
-              <div className="lp-seg" style={{ marginTop: 16 }}>
-                <button type="button" className={triggerType === 'phrase' ? 'active' : ''} onClick={() => setTriggerType('phrase')}>
-                  Phrase
-                </button>
-                <button type="button" className={triggerType === 'schedule' ? 'active' : ''} onClick={() => setTriggerType('schedule')}>
-                  Schedule
-                </button>
-              </div>
-              <div style={{ marginTop: 12 }}>
-                {triggerType === 'phrase' ? (
-                  <input
-                    className="lp-field"
-                    value={phrase}
-                    onChange={(e) => setPhrase(e.target.value)}
-                    placeholder='e.g. "download unpaid invoices"'
-                  />
-                ) : (
-                  <input
-                    className="lp-field mono"
-                    value={schedule}
-                    onChange={(e) => setSchedule(e.target.value)}
-                    placeholder="0 9 * * 1"
-                  />
-                )}
-              </div>
-              {error && <p className="lp-error">{error}</p>}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 18 }}>
-                <button type="button" className="lp-btn primary" onClick={save} disabled={saving}>
-                  {saving ? 'Saving…' : 'Looks good, save it'}
-                </button>
-                <span className="lp-faint" style={{ fontSize: 12.5 }}>
-                  or keep refining above
-                </span>
-              </div>
-            </>
-          )}
-        </section>
+              );
+            })}
+          </CardContent>
+        </Card>
       </div>
-    </main>
+
+      <aside className="space-y-4 lg:sticky lg:top-6 lg:self-start">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Save as a loop</CardTitle>
+            <CardDescription>Run it on demand, or exactly like this every time.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {savedId ? (
+              <div className="space-y-3">
+                <p className="flex items-center gap-2 text-sm font-medium text-primary">
+                  <Check className="size-4" />
+                  Saved.
+                </p>
+                <Link
+                  href={`/loops/${savedId}?run=1`}
+                  className={buttonVariants({ className: 'w-full' })}
+                >
+                  Run it now
+                  <ArrowRight />
+                </Link>
+                <Link
+                  href="/"
+                  className={buttonVariants({ variant: 'outline', className: 'w-full' })}
+                >
+                  Back to loops
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="trigger-name">Trigger</Label>
+                  <Tabs
+                    value={triggerType}
+                    onValueChange={(value) => setTriggerType(value as 'phrase' | 'schedule')}
+                  >
+                    <TabsList className="w-full">
+                      <TabsTrigger value="phrase">Phrase</TabsTrigger>
+                      <TabsTrigger value="schedule">Schedule</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  {triggerType === 'phrase' ? (
+                    <Input
+                      id="trigger-name"
+                      value={phrase}
+                      onChange={(event) => setPhrase(event.target.value)}
+                      placeholder="download unpaid invoices"
+                    />
+                  ) : (
+                    <Input
+                      value={schedule}
+                      onChange={(event) => setSchedule(event.target.value)}
+                      placeholder="0 9 * * 1"
+                      className="font-mono"
+                    />
+                  )}
+                </div>
+                {error ? <p className="text-sm text-destructive">{error}</p> : null}
+                <Button className="w-full" onClick={() => void save()} disabled={saving}>
+                  <Save />
+                  {saving ? 'Saving…' : 'Looks good, save it'}
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  or keep refining the steps
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        {profileId ? (
+          <Card className="py-3">
+            <CardContent className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Layers className="size-3.5" />
+              Saved login reused on every run.
+            </CardContent>
+          </Card>
+        ) : null}
+      </aside>
+    </div>
+  );
+}
+
+function MicNote() {
+  return (
+    <span className="mt-0.5 grid size-6 shrink-0 place-items-center rounded-md bg-primary/15 text-primary">
+      <MicIcon />
+    </span>
+  );
+}
+
+function MicIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <rect x="9" y="2.5" width="6" height="11" rx="3" stroke="currentColor" strokeWidth="1.9" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
   );
 }

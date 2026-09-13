@@ -10,3 +10,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   if (!skill) return NextResponse.json({ error: 'Skill not found' }, { status: 404 });
   return NextResponse.json({ skill });
 }
+
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!store.skills.get(id)) {
+    return NextResponse.json({ error: 'Skill not found' }, { status: 404 });
+  }
+  store.skills.delete(id);
+  return NextResponse.json({ ok: true });
+}

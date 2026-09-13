@@ -1,36 +1,12 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { Maximize2, Minimize2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
-function ExpandIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M4 9V4h5M20 15v5h-5M15 4h5v5M9 20H4v-5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function CompressIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M9 4v5H4M15 20v-5h5M20 9h-5V4M4 15h5v5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-export default function BrowserPane({
+export function BrowserPane({
   src,
   title = 'Live browser',
   label,
@@ -40,7 +16,7 @@ export default function BrowserPane({
   onNavigate,
   placeholder = 'Type a URL and press Enter',
   actions,
-  className = '',
+  className,
 }: {
   src: string;
   title?: string;
@@ -66,24 +42,29 @@ export default function BrowserPane({
 
   return (
     <>
-      <div className={`lp-browser ${full ? 'lp-browser--full' : ''} ${className}`.trim()}>
-        <div className="lp-browser-bar">
+      <div
+        className={cn(
+          'overflow-hidden rounded-xl border bg-card shadow-sm',
+          full && 'fixed inset-3 z-50 shadow-2xl',
+          className,
+        )}
+      >
+        <div className="flex h-11 items-center gap-2 border-b bg-background/60 px-2.5">
           {recording ? (
-            <span className="lp-rec-chip">
-              <span className="lp-led" />
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-destructive/15 px-2 py-1 text-[11px] font-semibold tracking-wide text-destructive uppercase">
+              <span className="size-1.5 animate-pulse rounded-full bg-destructive" />
               rec
             </span>
           ) : (
-            <span className="lp-browser-dots">
-              <span />
-              <span />
-              <span />
+            <span className="flex gap-1.5 pl-1.5">
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" />
+              <span className="size-2.5 rounded-full bg-muted-foreground/30" />
             </span>
           )}
 
           {onAddressChange ? (
-            <input
-              className="lp-browser-url"
+            <Input
               value={address}
               onChange={(event) => onAddressChange(event.target.value)}
               onKeyDown={(event) => {
@@ -94,33 +75,36 @@ export default function BrowserPane({
               }}
               placeholder={placeholder}
               spellCheck={false}
+              className="h-7 flex-1 font-mono text-xs"
             />
           ) : (
-            <span className="lp-browser-url lp-browser-static">{label ?? 'live session'}</span>
+            <span className="flex-1 truncate px-1 text-xs text-muted-foreground">
+              {label ?? 'live session · steel cloud'}
+            </span>
           )}
 
           {actions}
 
-          <button
-            type="button"
-            className="lp-icon-btn"
+          <Button
+            size="icon-sm"
+            variant="ghost"
             onClick={() => setFull((value) => !value)}
             title={full ? 'Exit full screen (Esc)' : 'Full screen'}
             aria-label={full ? 'Exit full screen' : 'Full screen'}
           >
-            {full ? <CompressIcon /> : <ExpandIcon />}
-          </button>
+            {full ? <Minimize2 /> : <Maximize2 />}
+          </Button>
         </div>
 
         <iframe
           src={src}
           title={title}
-          className="lp-browser-view"
+          className={cn('w-full border-0 bg-white', full ? 'h-[calc(100svh-4.5rem)]' : 'h-[520px]')}
           allow="clipboard-read; clipboard-write"
         />
       </div>
 
-      {full && <div className="lp-fullhint">Full screen · press Esc to exit</div>}
+      {full && <div className="fixed bottom-4 left-1/2 z-50 -translate-x-1/2 rounded-full border bg-popover px-3 py-1 text-xs text-muted-foreground shadow-lg">Full screen · press Esc to exit</div>}
     </>
   );
 }
