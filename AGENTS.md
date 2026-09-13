@@ -38,6 +38,7 @@ builds and starts the app itself.
   `'use client'` only when needed.
 - `lib/**` is server-only. Never import it into a client component; go through `app/api/**`.
 - Comments explain a non-obvious *why*. Do not restate the code.
+- No em dashes anywhere: not in docs, copy, comments, or commit messages. Use a comma or a colon.
 - Commits are one-line [Conventional Commits](https://www.conventionalcommits.org/),
   `type: subject`. Never add `Co-Authored-By:` or session trailers.
 - Commit and push only when asked.
